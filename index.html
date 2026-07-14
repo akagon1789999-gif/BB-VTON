@@ -133,7 +133,7 @@
         <div style="display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(201,167,105,0.4);color:#c9a769;font-size:12px;letter-spacing:1.5px;padding:7px 14px;border-radius:999px;margin-bottom:22px;">
           <span style="width:6px;height:6px;border-radius:50%;background:#c9a769;display:inline-block;"></span>VIRTUAL TRY-ON EXPERIENCE
         </div>
-        <h1 style="font-family:'Playfair Display',serif;font-size:52px;line-height:1.08;margin:0 0 20px;font-weight:600;">See Yourself in the<br/><span style="color:#c9a769;font-style:italic;">Perfect Suit</span></h1>
+        <h1 style="font-family:'Playfair Display',serif;font-size:52px;line-height:1.08;margin:0 0 20px;font-weight:600;">Wear it before<br/><span style="color:#c9a769;font-style:italic;">You own it</span></h1>
         <p style="color:#a39c8e;font-size:16.5px;line-height:1.6;max-width:460px;margin:0 0 30px;">Upload your photo and virtually try on any style from our collection. Find your perfect look before you buy — powered by AI.</p>
         <div style="display:flex;gap:14px;margin-bottom:38px;flex-wrap:wrap;">
           <button style="display:flex;align-items:center;gap:9px;background:linear-gradient(180deg,#d8b878,#b5904f);color:#211a0e;border:none;border-radius:999px;padding:14px 26px;font-weight:600;font-size:14.5px;cursor:pointer;" onClick="{{ openTryOnFresh }}">
@@ -565,6 +565,8 @@
             <div style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap;">
               <button style="background:transparent;border:1px solid rgba(255,255,255,0.15);color:#f2ede4;border-radius:999px;padding:12px 22px;font-size:14px;cursor:pointer;" onClick="{{ toStep1 }}">Use Another Photo</button>
               <button style="background:#1f1d18;border:1px solid rgba(255,255,255,0.1);color:#f2ede4;border-radius:999px;padding:12px 22px;font-size:14px;cursor:pointer;" onClick="{{ goCatalog }}">Choose Another Suit</button>
+              <button style="background:transparent;border:1px solid rgba(255,255,255,0.15);color:#f2ede4;border-radius:999px;padding:12px 22px;font-size:14px;cursor:pointer;" onClick="{{ downloadImage }}">Download Image</button>
+              <button style="background:#1f1d18;border:1px solid rgba(255,255,255,0.1);color:#f2ede4;border-radius:999px;padding:12px 22px;font-weight:600;font-size:14px;cursor:pointer;" onClick="{{ addToCart }}">{{ cartLabel }}</button>
               <button style="background:linear-gradient(180deg,#d8b878,#b5904f);color:#211a0e;border:none;border-radius:999px;padding:12px 26px;font-weight:700;font-size:14px;cursor:pointer;" onClick="{{ saveTryOn }}">{{ saveLabel }}</button>
             </div>
           </div>
@@ -694,6 +696,7 @@ class Component extends DCLogic {
     resultImageUrl: null,
     tryOnError: null,
     savedTryOns: [],
+    cart: [],
     sizeForm: { heightFt: '', heightIn: '', weight: '', chest: '', waist: '', hips: '', inseam: '', neck: '', shoulder: '', fit: 'Modern Fit' },
     sizeResult: null,
     catalogSearch: '',
@@ -772,12 +775,44 @@ class Component extends DCLogic {
   };
   pickSuit = (id) => this.setState({ selectedSuitId: id, tryOnError: null });
 
+  downloadImage = async () => {
+    const url = this.state.resultImageUrl;
+    if (!url) return;
+    const suit = RAW_SUITS.find((s) => s.id === this.state.selectedSuitId);
+    const fileName = suit ? `${suit.name.replace(/\s+/g, '-').toLowerCase()}-try-on.jpg` : 'virtual-try-on.jpg';
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      console.error('Download failed:', err);
+      window.open(url, '_blank');
+    }
+  };
+
   saveTryOn = () => {
     const suit = RAW_SUITS.find(s => s.id === this.state.selectedSuitId);
     if (!suit || !this.state.resultImageUrl) return;
     this.setState(s => ({
       savedTryOns: [...s.savedTryOns, { suit, time: 'Just now', resultImageUrl: s.resultImageUrl }],
     }));
+  };
+
+  addToCart = () => {
+    const suit = RAW_SUITS.find(s => s.id === this.state.selectedSuitId);
+    if (!suit) return;
+    this.setState(s => (
+      s.cart.some(item => item.suit.id === suit.id)
+        ? null
+        : { cart: [...s.cart, { suit, resultImageUrl: s.resultImageUrl }] }
+    ));
   };
 
   setField = (key) => (e) => this.setState(s => ({ sizeForm: { ...s.sizeForm, [key]: e.target.value } }));
@@ -936,6 +971,9 @@ class Component extends DCLogic {
       suitActionLabel: selectedSuit ? 'Choose Another Suit' : 'Browse Collection',
       saveLabel: s.savedTryOns.some(t => t.suit.id === s.selectedSuitId) ? 'Saved ✓' : 'Save to My Try-Ons',
       saveTryOn: this.saveTryOn,
+      downloadImage: this.downloadImage,
+      addToCart: this.addToCart,
+      cartLabel: s.cart.some(t => t.suit.id === s.selectedSuitId) ? 'Added to Cart ✓' : 'Add to Cart',
     };
   }
 }
