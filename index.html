@@ -80,6 +80,28 @@
 
 <div style="background:#0b0b0a;min-height:100vh;font-family:Inter,sans-serif;color:#f2ede4;">
 
+  <!-- PWA INSTALL BANNER -->
+  <sc-if value="{{ showInstallBanner }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;left:16px;right:16px;bottom:16px;max-width:420px;margin:0 auto;background:#141310;border:1px solid rgba(201,167,105,0.3);border-radius:16px;padding:16px 18px;display:flex;align-items:center;gap:14px;box-shadow:0 12px 32px rgba(0,0,0,0.45);z-index:200;">
+      <img src="./icons/icon-96.png" alt="BB Apparel" style="width:44px;height:44px;border-radius:12px;flex-shrink:0;">
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:700;font-size:14px;margin-bottom:2px;">Install BB Apparel</div>
+        <sc-if value="{{ isIosInstall }}" hint-placeholder-val="{{ false }}">
+          <div style="color:#a39c8e;font-size:12px;line-height:1.4;">Tap <strong>Share</strong> then <strong>Add to Home Screen</strong> for the full app experience.</div>
+        </sc-if>
+        <sc-if value="{{ isNotIosInstall }}" hint-placeholder-val="{{ true }}">
+          <div style="color:#a39c8e;font-size:12px;line-height:1.4;">Add it to your home screen for quick, full-screen access.</div>
+        </sc-if>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
+        <sc-if value="{{ isNotIosInstall }}" hint-placeholder-val="{{ true }}">
+          <button style="background:linear-gradient(180deg,#d8b878,#b5904f);color:#211a0e;border:none;border-radius:999px;padding:8px 16px;font-weight:700;font-size:12.5px;cursor:pointer;white-space:nowrap;" onClick="{{ installApp }}">Install</button>
+        </sc-if>
+        <button style="background:transparent;border:1px solid rgba(255,255,255,0.15);color:#8a8478;border-radius:999px;padding:8px 12px;font-size:11.5px;cursor:pointer;" onClick="{{ dismissInstallBanner }}">Not now</button>
+      </div>
+    </div>
+  </sc-if>
+
   <!-- HEADER -->
   <header class="vt-header" style="display:flex;align-items:center;justify-content:space-between;padding:20px 48px;border-bottom:1px solid rgba(255,255,255,0.07);position:sticky;top:0;background:rgba(11,11,10,0.85);backdrop-filter:blur(10px);z-index:40;">
     <div style="display:flex;align-items:center;gap:10px;cursor:pointer;flex-shrink:0;" onClick="{{ goHome }}">
@@ -427,7 +449,7 @@
           <sc-for list="{{ savedTryOns }}" as="item" hint-placeholder-count="0">
             <div style="background:#141310;border:1px solid rgba(255,255,255,0.07);border-radius:14px;overflow:hidden;">
               <div style="height:220px;position:relative;background:#1b1a17;">
-                <img src="{{ item.resultImageUrl }}" alt="{{ item.suit.name }}" style="width:100%;height:100%;object-fit:cover;display:block;">
+                <img src="{{ item.resultImageUrl }}" alt="{{ item.suit.name }}" style="width:100%;height:100%;object-fit:contain;object-position:center top;display:block;">
                 <div style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,0.6);border-radius:8px;padding:5px 9px;font-size:11px;">{{ item.suit.name }}</div>
               </div>
               <div style="padding:14px;">
@@ -549,7 +571,7 @@
             <div style="color:#8a8478;font-size:14px;margin-bottom:26px;text-align:center;">{{ selectedSuitName }}</div>
             <div style="display:flex;gap:20px;justify-content:center;margin-bottom:30px;">
               <div style="width:100%;max-width:320px;height:440px;border-radius:14px;overflow:hidden;position:relative;border:1px solid rgba(255,255,255,0.08);background:#101009;">
-                <img src="{{ resultImageUrl }}" alt="AI-generated try-on result" style="width:100%;height:100%;object-fit:cover;display:block;">
+                <img src="{{ resultImageUrl }}" alt="AI-generated try-on result" style="width:100%;height:100%;object-fit:contain;object-position:center top;display:block;">
                 <div style="position:absolute;top:12px;left:12px;background:rgba(201,167,105,0.9);color:#1a1710;font-size:10.5px;font-weight:700;padding:4px 10px;border-radius:999px;">AI TRY-ON</div>
                 <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(0deg,rgba(0,0,0,0.75),transparent);padding:14px;display:flex;align-items:center;gap:10px;">
                   <div style="width:44px;height:44px;border-radius:8px;overflow:hidden;border:1px solid rgba(255,255,255,0.2);flex-shrink:0;">
@@ -704,7 +726,50 @@ class Component extends DCLogic {
     catalogFit: 'All',
     catalogBrand: 'All',
     mobileMenuOpen: false,
+    showInstallBanner: false,
+    installPromptEvent: null,
+    isIosInstall: false,
   };
+
+  componentDidMount() {
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    if (isStandalone) return;
+
+    window.addEventListener('beforeinstallprompt', this.onBeforeInstallPrompt);
+
+    const ua = window.navigator.userAgent || '';
+    const isIos = /iphone|ipad|ipod/i.test(ua);
+    const isSafari = /safari/i.test(ua) && !/crios|fxios|chrome|android/i.test(ua);
+    if (isIos && isSafari) {
+      this.setState({ isIosInstall: true, showInstallBanner: true });
+    }
+  }
+
+  componentWillUnmount() {
+    window.removeEventListener('beforeinstallprompt', this.onBeforeInstallPrompt);
+  }
+
+  onBeforeInstallPrompt = (e) => {
+    e.preventDefault();
+    this.setState({ installPromptEvent: e, showInstallBanner: true });
+  };
+
+  installApp = async () => {
+    const promptEvent = this.state.installPromptEvent;
+    if (!promptEvent) {
+      this.setState({ showInstallBanner: false });
+      return;
+    }
+    promptEvent.prompt();
+    try {
+      await promptEvent.userChoice;
+    } catch (err) {
+      console.warn('Install prompt dismissed:', err);
+    }
+    this.setState({ showInstallBanner: false, installPromptEvent: null });
+  };
+
+  dismissInstallBanner = () => this.setState({ showInstallBanner: false });
 
   setCatalogSearch = (e) => this.setState({ catalogSearch: e.target.value });
   setCatalogCategory = (v) => this.setState({ catalogCategory: v });
@@ -974,6 +1039,11 @@ class Component extends DCLogic {
       downloadImage: this.downloadImage,
       addToCart: this.addToCart,
       cartLabel: s.cart.some(t => t.suit.id === s.selectedSuitId) ? 'Added to Cart ✓' : 'Add to Cart',
+      showInstallBanner: s.showInstallBanner,
+      isIosInstall: s.isIosInstall,
+      isNotIosInstall: !s.isIosInstall,
+      installApp: this.installApp,
+      dismissInstallBanner: this.dismissInstallBanner,
     };
   }
 }
