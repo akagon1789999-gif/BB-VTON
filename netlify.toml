@@ -1,0 +1,13 @@
+[build]
+  publish = "."
+  functions = "netlify/functions"
+
+[[redirects]]
+  from = "/api/fashn/run"
+  to = "/.netlify/functions/fashn-run"
+  status = 200
+
+[[redirects]]
+  from = "/api/fashn/status/:id"
+  to = "/.netlify/functions/fashn-status?id=:id"
+  status = 200

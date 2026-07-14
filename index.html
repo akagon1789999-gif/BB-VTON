@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <title>BB Apparel — Virtual Try-On</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <meta name="theme-color" content="#0b0b0a">
+  <meta name="description" content="Upload your photo and virtually try on suits, blazers, and dresses before you buy — powered by AI.">
+  <link rel="icon" href="./icons/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="BB Apparel">
+  <meta name="mobile-web-app-capable" content="yes">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box;}
+    html{overflow-x:hidden;}
+    body{margin:0;background:#0b0b0a;overflow-x:hidden;}
+    img{max-width:100%;}
+    @keyframes vt-spin{to{transform:rotate(360deg)}}
+    @keyframes vt-fadeup{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes vt-pulse{0%,100%{opacity:.5}50%{opacity:1}}
+
+    /* ---------- Responsive layer ---------- */
+    .vt-burger { display:none; }
+    .vt-mobile-menu { display:none; }
+    @media (max-width:900px){
+      header, section, footer { padding-left:24px !important; padding-right:24px !important; }
+      .vt-hero { grid-template-columns:1fr !important; gap:28px !important; }
+      .vt-hero-media { height:380px !important; }
+      .vt-catalog-layout { grid-template-columns:1fr !important; }
+      .vt-catalog-sidebar { position:static !important; }
+      .vt-grid-3 { grid-template-columns:repeat(2,1fr) !important; }
+      .vt-grid-4 { grid-template-columns:repeat(2,1fr) !important; }
+      .vt-footer-grid { grid-template-columns:1fr 1fr !important; gap:28px !important; }
+    }
+    @media (max-width:700px){
+      .vt-nav-desktop { display:none !important; }
+      .vt-burger { display:flex !important; }
+      .vt-mobile-menu { display:flex !important; }
+    }
+    @media (max-width:640px){
+      header, section, footer { padding-left:18px !important; padding-right:18px !important; }
+      h1 { font-size:32px !important; }
+      h2 { font-size:24px !important; }
+      .vt-header { padding-top:14px !important; padding-bottom:14px !important; }
+      .vt-brand-text { display:none; }
+      .vt-stats-row { gap:24px !important; }
+      .vt-hero-media { height:260px !important; }
+      .vt-grid-2 { grid-template-columns:1fr !important; }
+      .vt-grid-3 { grid-template-columns:1fr !important; }
+      .vt-grid-4 { grid-template-columns:1fr !important; }
+      .vt-footer-grid { grid-template-columns:1fr !important; }
+      .vt-footer-bottom { flex-direction:column !important; gap:8px !important; text-align:center !important; }
+      .vt-photo-box { height:380px !important; }
+    }
+    @media (max-width:480px){
+      .vt-tryon-now { display:none !important; }
+    }
+  </style>
+  <script src="./image-slot.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch((err) => {
+          console.warn('Service worker registration failed:', err);
+        });
+      });
+    }
+  </script>
+</helmet>
+
+<div style="background:#0b0b0a;min-height:100vh;font-family:Inter,sans-serif;color:#f2ede4;">
+
+  <!-- HEADER -->
+  <header class="vt-header" style="display:flex;align-items:center;justify-content:space-between;padding:20px 48px;border-bottom:1px solid rgba(255,255,255,0.07);position:sticky;top:0;background:rgba(11,11,10,0.85);backdrop-filter:blur(10px);z-index:40;">
+    <div style="display:flex;align-items:center;gap:10px;cursor:pointer;flex-shrink:0;" onClick="{{ goHome }}">
+      <img src="assets/bb-logo-mark.png" alt="BB Apparel" style="height:36px;width:auto;display:block;flex-shrink:0;">
+      <div class="vt-brand-text" style="line-height:1.1;white-space:nowrap;">
+        <div style="font-family:'Playfair Display',serif;font-weight:600;letter-spacing:1px;font-size:15px;">BB APPAREL</div>
+        <div style="font-size:9px;letter-spacing:2px;color:#8a8478;">VIRTUAL TRY-ON</div>
+      </div>
+    </div>
+    <nav class="vt-nav-desktop" style="display:flex;gap:6px;">
+      <div style="padding:9px 16px;border-radius:999px;font-size:13.5px;cursor:pointer;background:{{ navBg.home }};color:{{ navColor.home }};" onClick="{{ goHome }}">Home</div>
+      <div style="padding:9px 16px;border-radius:999px;font-size:13.5px;cursor:pointer;background:{{ navBg.catalog }};color:{{ navColor.catalog }};" onClick="{{ goCatalog }}">Catalog</div>
+      <div style="padding:9px 16px;border-radius:999px;font-size:13.5px;cursor:pointer;background:{{ navBg.size }};color:{{ navColor.size }};" onClick="{{ goSize }}">Size Finder</div>
+      <div style="padding:9px 16px;border-radius:999px;font-size:13.5px;cursor:pointer;background:{{ navBg.tryon }};color:{{ navColor.tryon }};" onClick="{{ openTryOnFresh }}">Virtual Try-On</div>
+      <div style="padding:9px 16px;border-radius:999px;font-size:13.5px;cursor:pointer;background:{{ navBg.saved }};color:{{ navColor.saved }};" onClick="{{ goSaved }}">My Try-Ons {{ savedBadge }}</div>
+    </nav>
+    <div style="display:flex;align-items:center;gap:14px;">
+      <div class="vt-cart" style="width:38px;height:38px;border-radius:50%;border:1px solid rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;position:relative;cursor:pointer;" onClick="{{ goSaved }}">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#e9e4d8" stroke-width="1.8"><path d="M6 2l1.5 4h9L18 2M3.5 6h17l-1.5 13a2 2 0 01-2 2H7a2 2 0 01-2-2L3.5 6z"/></svg>
+        <sc-if value="{{ hasSaved }}"><div style="position:absolute;top:-4px;right:-4px;background:#c9a769;color:#1a1710;font-size:9px;font-weight:700;border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;">{{ savedBadge }}</div></sc-if>
+      </div>
+      <button class="vt-tryon-now" style="display:flex;align-items:center;gap:8px;background:linear-gradient(180deg,#d8b878,#b5904f);color:#211a0e;border:none;border-radius:999px;padding:11px 20px;font-weight:600;font-size:13.5px;cursor:pointer;" onClick="{{ openTryOnFresh }}">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#211a0e" stroke-width="2"><path d="M4 8V6a2 2 0 012-2h2M4 16v2a2 2 0 002 2h2M20 8V6a2 2 0 00-2-2h-2M20 16v2a2 2 0 01-2 2h-2"/><circle cx="12" cy="12" r="3"/></svg>
+        Try On Now
+      </button>
+      <button class="vt-burger" aria-label="Menu" style="display:none;align-items:center;justify-content:center;width:38px;height:38px;border-radius:10px;border:1px solid rgba(255,255,255,0.12);background:transparent;cursor:pointer;flex-shrink:0;" onClick="{{ toggleMobileMenu }}">
+        <sc-if value="{{ mobileMenuOpen }}" hint-placeholder-val="{{ false }}">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f2ede4" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </sc-if>
+        <sc-if value="{{ mobileMenuClosed }}" hint-placeholder-val="{{ true }}">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f2ede4" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+        </sc-if>
+      </button>
+    </div>
+    <sc-if value="{{ mobileMenuOpen }}" hint-placeholder-val="{{ false }}">
+      <div class="vt-mobile-menu" style="position:absolute;top:100%;left:0;right:0;background:#141310;border-bottom:1px solid rgba(255,255,255,0.08);padding:10px 18px 18px;display:flex;flex-direction:column;gap:4px;box-shadow:0 12px 24px rgba(0,0,0,0.35);">
+        <div style="padding:13px 14px;border-radius:10px;font-size:14.5px;font-weight:600;cursor:pointer;background:{{ navBg.home }};color:{{ navColor.home }};" onClick="{{ goHome }}">Home</div>
+        <div style="padding:13px 14px;border-radius:10px;font-size:14.5px;font-weight:600;cursor:pointer;background:{{ navBg.catalog }};color:{{ navColor.catalog }};" onClick="{{ goCatalog }}">Catalog</div>
+        <div style="padding:13px 14px;border-radius:10px;font-size:14.5px;font-weight:600;cursor:pointer;background:{{ navBg.size }};color:{{ navColor.size }};" onClick="{{ goSize }}">Size Finder</div>
+        <div style="padding:13px 14px;border-radius:10px;font-size:14.5px;font-weight:600;cursor:pointer;background:{{ navBg.tryon }};color:{{ navColor.tryon }};" onClick="{{ openTryOnFresh }}">Virtual Try-On</div>
+        <div style="padding:13px 14px;border-radius:10px;font-size:14.5px;font-weight:600;cursor:pointer;background:{{ navBg.saved }};color:{{ navColor.saved }};" onClick="{{ goSaved }}">My Try-Ons {{ savedBadge }}</div>
+      </div>
+    </sc-if>
+  </header>
+
+  <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+  <div>
+    <!-- HERO -->
+    <section class="vt-hero" style="display:grid;grid-template-columns:1.1fr 1fr;gap:40px;padding:80px 48px 60px;max-width:1400px;margin:0 auto;align-items:center;">
+      <div>
+        <div style="display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(201,167,105,0.4);color:#c9a769;font-size:12px;letter-spacing:1.5px;padding:7px 14px;border-radius:999px;margin-bottom:22px;">
+          <span style="width:6px;height:6px;border-radius:50%;background:#c9a769;display:inline-block;"></span>VIRTUAL TRY-ON EXPERIENCE
+        </div>
+        <h1 style="font-family:'Playfair Display',serif;font-size:52px;line-height:1.08;margin:0 0 20px;font-weight:600;">See Yourself in the<br/><span style="color:#c9a769;font-style:italic;">Perfect Suit</span></h1>
+        <p style="color:#a39c8e;font-size:16.5px;line-height:1.6;max-width:460px;margin:0 0 30px;">Upload your photo and virtually try on any style from our collection. Find your perfect look before you buy — powered by AI.</p>
+        <div style="display:flex;gap:14px;margin-bottom:38px;flex-wrap:wrap;">
+          <button style="display:flex;align-items:center;gap:9px;background:linear-gradient(180deg,#d8b878,#b5904f);color:#211a0e;border:none;border-radius:999px;padding:14px 26px;font-weight:600;font-size:14.5px;cursor:pointer;" onClick="{{ openTryOnFresh }}">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#211a0e" stroke-width="2"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2"/><circle cx="12" cy="13" r="3"/></svg>
+            Start Try-On
+          </button>
+          <button style="display:flex;align-items:center;gap:8px;background:#efe9dd;color:#1a1710;border:none;border-radius:999px;padding:14px 24px;font-weight:600;font-size:14.5px;cursor:pointer;" onClick="{{ goCatalog }}">
+            Browse Collection
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1a1710" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </button>
+        </div>
+        <div class="vt-stats-row" style="display:flex;gap:44px;flex-wrap:wrap;">
+          <div><div style="font-family:'Playfair Display',serif;font-size:22px;color:#c9a769;font-weight:600;">500+</div><div style="font-size:12px;color:#8a8478;">Styles Available</div></div>
+          <div><div style="font-family:'Playfair Display',serif;font-size:22px;color:#c9a769;font-weight:600;">AI</div><div style="font-size:12px;color:#8a8478;">Powered Try-On</div></div>
+          <div><div style="font-family:'Playfair Display',serif;font-size:22px;color:#c9a769;font-weight:600;">Free</div><div style="font-size:12px;color:#8a8478;">To Use</div></div>
+        </div>
+      </div>
+      <div class="vt-hero-media" style="position:relative;height:536px;">
+        <img src="assets/hero-ar-1.png" alt="Customer using AI virtual try-on on her phone at home" style="width:100%;height:100%;object-fit:cover;object-position:45% 45%;display:block;border-radius:20px;">
+        <div style="position:absolute;inset:0;border-radius:20px;background:linear-gradient(120deg,#0b0b0a 0%,rgba(11,11,10,0.5) 20%,transparent 48%),linear-gradient(to top,#0b0b0a 0%,transparent 32%);pointer-events:none;"></div>
+      </div>
+    </section>
+
+    <!-- HOW IT WORKS -->
+    <section style="padding:70px 48px;max-width:1400px;margin:0 auto;text-align:center;">
+      <div style="color:#c9a769;font-size:12px;letter-spacing:2px;margin-bottom:10px;">HOW IT WORKS</div>
+      <h2 style="font-family:'Playfair Display',serif;font-size:34px;font-weight:600;margin:0 0 44px;">Four Simple Steps</h2>
+      <div class="vt-grid-4" style="display:grid;grid-template-columns:repeat(4,1fr);gap:20px;text-align:left;">
+        <div style="background:#141310;border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:26px;position:relative;">
+          <div style="position:absolute;top:-12px;right:16px;width:26px;height:26px;border-radius:50%;background:#c9a769;color:#1a1710;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;">1</div>
+          <div style="width:42px;height:42px;border-radius:10px;background:#1f1d18;display:flex;align-items:center;justify-content:center;margin-bottom:18px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c9a769" stroke-width="1.8"><path d="M12 3v12M7 8l5-5 5 5M5 21h14"/></svg>
+          </div>
+          <div style="font-weight:600;font-size:15.5px;margin-bottom:8px;">Upload Your Photo</div>
+          <div style="font-size:13px;color:#8a8478;line-height:1.55;">Take a full-body photo or upload one from your gallery. Stand facing the camera for the best results.</div>
+        </div>
+        <div style="background:#141310;border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:26px;position:relative;">
+          <div style="position:absolute;top:-12px;right:16px;width:26px;height:26px;border-radius:50%;background:#c9a769;color:#1a1710;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;">2</div>
+          <div style="width:42px;height:42px;border-radius:10px;background:#1f1d18;display:flex;align-items:center;justify-content:center;margin-bottom:18px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c9a769" stroke-width="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          </div>
+          <div style="font-weight:600;font-size:15.5px;margin-bottom:8px;">Find Your Size</div>
+          <div style="font-size:13px;color:#8a8478;line-height:1.55;">Enter your height, weight, or key measurements and we'll recommend your perfect jacket size, pant size, and fit type.</div>
+        </div>
+        <div style="background:#141310;border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:26px;position:relative;">
+          <div style="position:absolute;top:-12px;right:16px;width:26px;height:26px;border-radius:50%;background:#c9a769;color:#1a1710;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;">3</div>
+          <div style="width:42px;height:42px;border-radius:10px;background:#1f1d18;display:flex;align-items:center;justify-content:center;margin-bottom:18px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c9a769" stroke-width="1.8"><path d="M9 4h6l1 3h3v2h-2l-1.2 11.2A2 2 0 0113.8 22h-3.6a2 2 0 01-2-1.8L7 9H5V7h3l1-3z"/></svg>
+          </div>
+          <div style="font-weight:600;font-size:15.5px;margin-bottom:8px;">Choose a Suit</div>
+          <div style="font-size:13px;color:#8a8478;line-height:1.55;">Browse our extensive catalog and select the suit, tuxedo, or blazer you want to try on virtually.</div>
+        </div>
+        <div style="background:#141310;border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:26px;position:relative;">
+          <div style="position:absolute;top:-12px;right:16px;width:26px;height:26px;border-radius:50%;background:#c9a769;color:#1a1710;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;">4</div>
+          <div style="width:42px;height:42px;border-radius:10px;background:#1f1d18;display:flex;align-items:center;justify-content:center;margin-bottom:18px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c9a769" stroke-width="1.8"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+          </div>
+          <div style="font-weight:600;font-size:15.5px;margin-bottom:8px;">See Your Look</div>
+          <div style="font-size:13px;color:#8a8478;line-height:1.55;">Our AI places the suit on your photo so you can see exactly how it looks on you before buying.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FEATURED SUITS -->
+    <section id="catalog-section" style="padding:80px 48px;max-width:1400px;margin:0 auto;">
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:32px;">
+        <div>
+          <div style="color:#c9a769;font-size:12px;letter-spacing:2px;margin-bottom:10px;">OUR COLLECTION</div>
+          <h2 style="font-family:'Playfair Display',serif;font-size:32px;font-weight:600;margin:0;">Featured Styles</h2>
+        </div>
+        <div style="color:#c9a769;font-size:13.5px;display:flex;align-items:center;gap:6px;cursor:pointer;" onClick="{{ goCatalog }}">View All
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#c9a769" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </div>
+      </div>
+      <div class="vt-grid-4" style="display:grid;grid-template-columns:repeat(4,1fr);gap:22px;">
+        <sc-for list="{{ suits }}" as="suit" hint-placeholder-count="8">
+          <div style="background:#141310;border:1px solid rgba(255,255,255,0.07);border-radius:14px;overflow:hidden;">
+            <div style="height:290px;position:relative;background:#1b1a17;">
+              <image-slot id="{{ suit.slotId }}" shape="rect" fit="contain" placeholder="Drop product photo" src="{{ suit.img }}"></image-slot>
+              <button style="position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:6px;background:rgba(20,19,16,0.85);color:#f2ede4;border:1px solid rgba(255,255,255,0.15);border-radius:999px;padding:8px 16px;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap;" onClick="{{ suit.tryOn }}">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f2ede4" stroke-width="2"><rect x="3" y="7" width="18" height="13" rx="2"/><circle cx="12" cy="13" r="3"/></svg>
+                Try On
+              </button>
+            </div>
+            <div style="padding:18px;">
+              <div style="font-size:12px;color:#8a8478;margin-bottom:3px;">{{ suit.brand }}</div>
+              <div style="font-weight:600;font-size:16px;margin-bottom:9px;">{{ suit.name }}</div>
+              <div style="display:flex;flex-wrap:wrap;gap:6px;row-gap:6px;margin-bottom:12px;">
+                <sc-for list="{{ suit.tags }}" as="tag" hint-placeholder-count="3">
+                  <span style="font-size:10.5px;color:#a39c8e;background:#1f1d18;border-radius:5px;padding:3px 8px;">{{ tag }}</span>
+                </sc-for>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;">
+                <div><span style="font-weight:700;font-size:16px;color:#c9a769;">{{ suit.price }}</span><div style="font-size:11px;color:#6f6a5f;">{{ suit.category }}</div></div>
+                <button style="display:flex;align-items:center;gap:6px;background:#1f1d18;border:1px solid rgba(255,255,255,0.1);color:#f2ede4;border-radius:999px;padding:7px 14px;font-size:12.5px;cursor:pointer;">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f2ede4" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Add
+                </button>
+              </div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <section style="padding:80px 48px 100px;text-align:center;">
+      <div style="font-size:28px;color:#c9a769;margin-bottom:16px;">✦</div>
+      <h2 style="font-family:'Playfair Display',serif;font-size:34px;font-weight:600;margin:0 0 12px;">Ready to Find Your <span style="color:#c9a769;font-style:italic;">Perfect Look?</span></h2>
+      <p style="color:#a39c8e;font-size:15.5px;max-width:420px;margin:0 auto 30px;">Upload your photo now and see yourself in any style from our collection in seconds.</p>
+      <button style="display:inline-flex;align-items:center;gap:9px;background:linear-gradient(180deg,#d8b878,#b5904f);color:#211a0e;border:none;border-radius:999px;padding:15px 28px;font-weight:600;font-size:15px;cursor:pointer;" onClick="{{ openTryOnFresh }}">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#211a0e" stroke-width="2"><rect x="3" y="7" width="18" height="13" rx="2"/><circle cx="12" cy="13" r="3"/></svg>
+        Start Your Try-On
+      </button>
+    </section>
+  </div>
+  </sc-if>
+
+  <!-- CATALOG VIEW -->
+  <sc-if value="{{ isCatalog }}" hint-placeholder-val="{{ false }}">
+    <section style="padding:60px 48px 100px;max-width:1400px;margin:0 auto;">
+      <div style="color:#c9a769;font-size:12px;letter-spacing:2px;margin-bottom:10px;">OUR COLLECTION</div>
+      <h2 style="font-family:'Playfair Display',serif;font-size:32px;font-weight:600;margin:0 0 30px;">Browse Collection</h2>
+      <div class="vt-catalog-layout" style="display:grid;grid-template-columns:220px 1fr;gap:36px;align-items:start;">
+        <div class="vt-catalog-sidebar" style="background:#141310;border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:22px;position:sticky;top:100px;">
+          <div style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:14px;margin-bottom:18px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f2ede4" stroke-width="2"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
+            Filters
+          </div>
+          <input type="text" value="{{ catalogSearch }}" onChange="{{ setCatalogSearch }}" placeholder="Search styles..." style="width:100%;box-sizing:border-box;background:#1b1a17;border:1px solid rgba(255,255,255,0.1);color:#f2ede4;border-radius:9px;padding:10px 12px;font-size:13px;margin-bottom:22px;" />
+
+          <div style="font-size:11px;letter-spacing:1px;color:#8a8478;margin-bottom:10px;">CATEGORY</div>
+          <div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:22px;">
+            <sc-for list="{{ categoryPills }}" as="p" hint-placeholder-count="4">
+              <div style="padding:6px 12px;border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;background:{{ p.bg }};color:{{ p.color }};" onClick="{{ p.select }}">{{ p.label }}</div>
+            </sc-for>
+          </div>
+
+          <div style="font-size:11px;letter-spacing:1px;color:#8a8478;margin-bottom:10px;">FIT TYPE</div>
+          <div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:22px;">
+            <sc-for list="{{ fitPills }}" as="p" hint-placeholder-count="4">
+              <div style="padding:6px 12px;border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;background:{{ p.bg }};color:{{ p.color }};" onClick="{{ p.select }}">{{ p.label }}</div>
+            </sc-for>
+          </div>
+
+          <div style="font-size:11px;letter-spacing:1px;color:#8a8478;margin-bottom:10px;">BRAND</div>
+          <div style="display:flex;flex-wrap:wrap;gap:7px;">
+            <sc-for list="{{ brandPills }}" as="p" hint-placeholder-count="5">
+              <div style="padding:6px 12px;border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;background:{{ p.bg }};color:{{ p.color }};" onClick="{{ p.select }}">{{ p.label }}</div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div>
+          <div style="color:#8a8478;font-size:13.5px;margin-bottom:18px;">{{ filteredCount }} styles found</div>
+          <div class="vt-grid-3" style="display:grid;grid-template-columns:repeat(3,1fr);gap:22px;">
+            <sc-for list="{{ filteredSuits }}" as="suit" hint-placeholder-count="9">
+              <div style="background:#141310;border:1px solid rgba(255,255,255,0.07);border-radius:14px;overflow:hidden;">
+                <div style="height:290px;position:relative;background:#1b1a17;">
+                  <image-slot id="{{ suit.slotId }}" shape="rect" fit="contain" placeholder="Drop product photo" src="{{ suit.img }}"></image-slot>
+                  <button style="position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:6px;background:rgba(20,19,16,0.85);color:#f2ede4;border:1px solid rgba(255,255,255,0.15);border-radius:999px;padding:8px 16px;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap;" onClick="{{ suit.tryOn }}">Try On</button>
+                </div>
+                <div style="padding:18px;">
+                  <div style="font-size:12px;color:#8a8478;margin-bottom:3px;">{{ suit.brand }}</div>
+                  <div style="font-weight:600;font-size:16px;margin-bottom:9px;">{{ suit.name }}</div>
+                  <div style="display:flex;gap:6px;margin-bottom:12px;">
+                    <sc-for list="{{ suit.tags }}" as="tag" hint-placeholder-count="3">
+                      <span style="font-size:10.5px;color:#a39c8e;background:#1f1d18;border-radius:5px;padding:3px 8px;">{{ tag }}</span>
+                    </sc-for>
+                  </div>
+                  <div style="display:flex;align-items:center;justify-content:space-between;">
+                    <div><span style="font-weight:700;font-size:16px;color:#c9a769;">{{ suit.price }}</span><div style="font-size:11px;color:#6f6a5f;">{{ suit.category }}</div></div>
+                    <button style="display:flex;align-items:center;gap:6px;background:#1f1d18;border:1px solid rgba(255,255,255,0.1);color:#f2ede4;border-radius:999px;padding:7px 14px;font-size:12.5px;cursor:pointer;">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f2ede4" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Add
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </section>
+  </sc-if>
+
+  <!-- SIZE FINDER VIEW -->
+  <sc-if value="{{ isSize }}" hint-placeholder-val="{{ false }}">
+    <section style="padding:70px 48px 100px;max-width:760px;margin:0 auto;text-align:center;">
+      <div style="display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(201,167,105,0.4);color:#c9a769;font-size:12px;letter-spacing:1.5px;padding:7px 14px;border-radius:999px;margin-bottom:22px;">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#c9a769" stroke-width="2"><path d="M20.59 13.41L12 22l-9-9V3h10l7.59 7.59a2 2 0 010 2.82z"/><circle cx="7.5" cy="7.5" r="1.5" fill="#c9a769" stroke="none"/></svg>
+        REDUCE RETURNS
+      </div>
+      <h2 style="font-family:'Playfair Display',serif;font-size:36px;font-weight:600;margin:0 0 14px;">Smart Size Finder</h2>
+      <p style="color:#a39c8e;font-size:15px;margin:0 0 40px;">Enter your measurements below and we'll recommend your suit size using our fit chart.</p>
+
+      <div style="background:#141310;border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:28px;text-align:left;margin-bottom:24px;">
+        <div style="font-family:'Playfair Display',serif;font-size:17px;font-weight:600;margin-bottom:6px;">Optional: Upload Your Photo</div>
+        <div style="color:#8a8478;font-size:13px;margin-bottom:18px;">Keep a photo of yourself on hand for reference while you enter your measurements below.</div>
+        <div style="border:1px dashed rgba(255,255,255,0.15);border-radius:12px;height:320px;overflow:hidden;position:relative;">
+          <image-slot id="size-photo" shape="rect" fit="contain" placeholder="Click to upload a full-body photo"></image-slot>
+        </div>
+      </div>
+
+      <div style="background:#141310;border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:28px;text-align:left;margin-bottom:24px;">
+        <div style="font-family:'Playfair Display',serif;font-size:17px;font-weight:600;margin-bottom:6px;">Your Measurements</div>
+        <div style="color:#8a8478;font-size:13px;margin-bottom:22px;">Fill in as many as you know. More measurements = more accurate sizing.</div>
+        <div class="vt-grid-2" style="display:grid;grid-template-columns:1fr 1fr;gap:18px 16px;">
+          <div>
+            <label style="font-size:11.5px;letter-spacing:1px;color:#8a8478;display:block;margin-bottom:8px;">HEIGHT (FT)</label>
+            <div style="position:relative;"><input type="number" value="{{ sizeForm.heightFt }}" onChange="{{ setField.heightFt }}" placeholder="e.g. 5" style="width:100%;box-sizing:border-box;background:#1b1a17;border:1px solid rgba(255,255,255,0.1);color:#f2ede4;border-radius:9px;padding:12px 14px;font-size:14.5px;" /></div>
+          </div>
+          <div>
+            <label style="font-size:11.5px;letter-spacing:1px;color:#8a8478;display:block;margin-bottom:8px;">HEIGHT (IN)</label>
+            <div style="position:relative;"><input type="number" value="{{ sizeForm.heightIn }}" onChange="{{ setField.heightIn }}" placeholder="e.g. 11" style="width:100%;box-sizing:border-box;background:#1b1a17;border:1px solid rgba(255,255,255,0.1);color:#f2ede4;border-radius:9px;padding:12px 14px;font-size:14.5px;" /><span style="position:absolute;right:14px;top:12px;font-size:12.5px;color:#6f6a5f;">in</span></div>
+          </div>
+          <div>
+            <label style="font-size:11.5px;letter-spacing:1px;color:#8a8478;display:block;margin-bottom:8px;">WEIGHT</label>
+            <div style="position:relative;"><input type="number" value="{{ sizeForm.weight }}" onChange="{{ setField.weight }}" placeholder="e.g. 180" style="width:100%;box-sizing:border-box;background:#1b1a17;border:1px solid rgba(255,255,255,0.1);color:#f2ede4;border-radius:9px;padding:12px 14px;font-size:14.5px;" /><span style="position:absolute;right:14px;top:12px;font-size:12.5px;color:#6f6a5f;">lbs</span></div>
+          </div>
+          <div>
+            <label style="font-size:11.5px;letter-spacing:1px;color:#8a8478;display:block;margin-bottom:8px;">CHEST</label>
+            <div style="position:relative;"><input type="number" value="{{ sizeForm.chest }}" onChange="{{ setField.chest }}" placeholder="e.g. 42" style="width:100%;box-sizing:border-box;background:#1b1a17;border:1px solid rgba(255,255,255,0.1);color:#f2ede4;border-radius:9px;padding:12px 14px;font-size:14.5px;" /><span style="position:absolute;right:14px;top:12px;font-size:12.5px;color:#6f6a5f;">in</span></div>
+            <div style="font-size:11.5px;color:#6f6a5f;margin-top:6px;">Measure around the fullest part of your chest</div>
+          </div>
+          <div>
+            <label style="font-size:11.5px;letter-spacing:1px;color:#8a8478;display:block;margin-bottom:8px;">WAIST</label>
+            <div style="position:relative;"><input type="number" value="{{ sizeForm.waist }}" onChange="{{ setField.waist }}" placeholder="e.g. 34" style="width:100%;box-sizing:border-box;background:#1b1a17;border:1px solid rgba(255,255,255,0.1);color:#f2ede4;border-radius:9px;padding:12px 14px;font-size:14.5px;" /><span style="position:absolute;right:14px;top:12px;font-size:12.5px;color:#6f6a5f;">in</span></div>
+            <div style="font-size:11.5px;color:#6f6a5f;margin-top:6px;">Measure at your natural waistline</div>
+          </div>
+          <div>
+            <label style="font-size:11.5px;letter-spacing:1px;color:#8a8478;display:block;margin-bottom:8px;">HIPS</label>
+            <div style="position:relative;"><input type="number" value="{{ sizeForm.hips }}" onChange="{{ setField.hips }}" placeholder="e.g. 40" style="width:100%;box-sizing:border-box;background:#1b1a17;border:1px solid rgba(255,255,255,0.1);color:#f2ede4;border-radius:9px;padding:12px 14px;font-size:14.5px;" /><span style="position:absolute;right:14px;top:12px;font-size:12.5px;color:#6f6a5f;">in</span></div>
+            <div style="font-size:11.5px;color:#6f6a5f;margin-top:6px;">Measure around the fullest part of your hips</div>
+          </div>
+          <div>
+            <label style="font-size:11.5px;letter-spacing:1px;color:#8a8478;display:block;margin-bottom:8px;">INSEAM</label>
+            <div style="position:relative;"><input type="number" value="{{ sizeForm.inseam }}" onChange="{{ setField.inseam }}" placeholder="e.g. 32" style="width:100%;box-sizing:border-box;background:#1b1a17;border:1px solid rgba(255,255,255,0.1);color:#f2ede4;border-radius:9px;padding:12px 14px;font-size:14.5px;" /><span style="position:absolute;right:14px;top:12px;font-size:12.5px;color:#6f6a5f;">in</span></div>
+            <div style="font-size:11.5px;color:#6f6a5f;margin-top:6px;">Measure from crotch to ankle</div>
+          </div>
+          <div>
+            <label style="font-size:11.5px;letter-spacing:1px;color:#8a8478;display:block;margin-bottom:8px;">NECK</label>
+            <div style="position:relative;"><input type="number" value="{{ sizeForm.neck }}" onChange="{{ setField.neck }}" placeholder="e.g. 16" style="width:100%;box-sizing:border-box;background:#1b1a17;border:1px solid rgba(255,255,255,0.1);color:#f2ede4;border-radius:9px;padding:12px 14px;font-size:14.5px;" /><span style="position:absolute;right:14px;top:12px;font-size:12.5px;color:#6f6a5f;">in</span></div>
+            <div style="font-size:11.5px;color:#6f6a5f;margin-top:6px;">Measure around base of neck</div>
+          </div>
+          <div>
+            <label style="font-size:11.5px;letter-spacing:1px;color:#8a8478;display:block;margin-bottom:8px;">SHOULDER WIDTH</label>
+            <div style="position:relative;"><input type="number" value="{{ sizeForm.shoulder }}" onChange="{{ setField.shoulder }}" placeholder="e.g. 18" style="width:100%;box-sizing:border-box;background:#1b1a17;border:1px solid rgba(255,255,255,0.1);color:#f2ede4;border-radius:9px;padding:12px 14px;font-size:14.5px;" /><span style="position:absolute;right:14px;top:12px;font-size:12.5px;color:#6f6a5f;">in</span></div>
+            <div style="font-size:11.5px;color:#6f6a5f;margin-top:6px;">Measure across back shoulder to shoulder</div>
+          </div>
+        </div>
+        <div style="margin-top:22px;">
+          <label style="font-size:11.5px;letter-spacing:1px;color:#8a8478;display:block;margin-bottom:10px;">PREFERRED FIT STYLE</label>
+          <div style="display:flex;gap:10px;">
+            <sc-for list="{{ fitOptions }}" as="fit" hint-placeholder-count="3">
+              <div style="padding:11px 20px;border-radius:999px;cursor:pointer;font-size:13.5px;font-weight:600;border:1px solid {{ fit.border }};background:{{ fit.bg }};color:{{ fit.color }};" onClick="{{ fit.select }}">{{ fit.label }}</div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+
+      <sc-if value="{{ sizeWarning }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;align-items:flex-start;gap:10px;background:#1b1a17;border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:16px 18px;margin-bottom:24px;text-align:left;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c9a769" stroke-width="2" style="flex-shrink:0;margin-top:2px;"><circle cx="12" cy="12" r="10"/><path d="M12 8v5M12 16h.01"/></svg>
+          <div style="font-size:13.5px;color:#a39c8e;line-height:1.5;">Enter at least your height + weight, or chest + waist measurements, to get started.</div>
+        </div>
+      </sc-if>
+
+      <button style="width:100%;display:flex;align-items:center;justify-content:center;gap:9px;background:{{ findSizeBg }};color:#211a0e;border:none;border-radius:12px;padding:16px;font-weight:700;font-size:15px;cursor:pointer;box-sizing:border-box;" onClick="{{ calcSize }}">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#211a0e" stroke-width="2"><path d="M8 3H5a2 2 0 00-2 2v3M16 3h3a2 2 0 012 2v3M8 21H5a2 2 0 01-2-2v-3M16 21h3a2 2 0 002-2v-3"/></svg>
+        Find My Size
+      </button>
+
+      <sc-if value="{{ sizeResult }}" hint-placeholder-val="{{ false }}">
+        <div style="background:#141310;border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:28px;margin-top:24px;text-align:left;animation:vt-fadeup .4s ease;">
+          <div style="font-size:13px;color:#8a8478;margin-bottom:14px;">Recommended Size</div>
+          <div style="display:flex;gap:14px;">
+            <div style="flex:1;background:#1b1a17;border-radius:10px;padding:16px;text-align:center;"><div style="font-size:11px;color:#8a8478;">Jacket</div><div style="font-family:'Playfair Display',serif;font-size:24px;color:#c9a769;font-weight:600;">{{ sizeResult.jacket }}</div></div>
+            <div style="flex:1;background:#1b1a17;border-radius:10px;padding:16px;text-align:center;"><div style="font-size:11px;color:#8a8478;">Pants</div><div style="font-family:'Playfair Display',serif;font-size:24px;color:#c9a769;font-weight:600;">{{ sizeResult.pants }}</div></div>
+            <div style="flex:1;background:#1b1a17;border-radius:10px;padding:16px;text-align:center;"><div style="font-size:11px;color:#8a8478;">Fit</div><div style="font-family:'Playfair Display',serif;font-size:24px;color:#c9a769;font-weight:600;">{{ sizeForm.fit }}</div></div>
+          </div>
+        </div>
+      </sc-if>
+    </section>
+  </sc-if>
+
+  <!-- MY TRY-ONS VIEW -->
+  <sc-if value="{{ isSaved }}" hint-placeholder-val="{{ false }}">
+    <section style="padding:70px 48px;max-width:1200px;margin:0 auto;min-height:400px;">
+      <h2 style="font-family:'Playfair Display',serif;font-size:32px;font-weight:600;margin:0 0 30px;">My Try-Ons</h2>
+      <sc-if value="{{ hasSaved }}" hint-placeholder-val="{{ false }}">
+        <div class="vt-grid-4" style="display:grid;grid-template-columns:repeat(4,1fr);gap:20px;">
+          <sc-for list="{{ savedTryOns }}" as="item" hint-placeholder-count="0">
+            <div style="background:#141310;border:1px solid rgba(255,255,255,0.07);border-radius:14px;overflow:hidden;">
+              <div style="height:220px;position:relative;background:#1b1a17;">
+                <img src="{{ item.resultImageUrl }}" alt="{{ item.suit.name }}" style="width:100%;height:100%;object-fit:cover;display:block;">
+                <div style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,0.6);border-radius:8px;padding:5px 9px;font-size:11px;">{{ item.suit.name }}</div>
+              </div>
+              <div style="padding:14px;">
+                <div style="font-size:12px;color:#8a8478;">{{ item.time }}</div>
+                <div style="font-weight:600;font-size:14.5px;">{{ item.suit.name }}</div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+      <sc-if value="{{ hasSavedNot }}" hint-placeholder-val="{{ true }}">
+        <div style="text-align:center;padding:80px 20px;border:1px dashed rgba(255,255,255,0.1);border-radius:16px;">
+          <div style="font-size:15px;color:#8a8478;margin-bottom:20px;">No try-ons saved yet.</div>
+          <button style="background:linear-gradient(180deg,#d8b878,#b5904f);color:#211a0e;border:none;border-radius:999px;padding:13px 24px;font-weight:600;font-size:14px;cursor:pointer;" onClick="{{ openTryOnFresh }}">Start Your First Try-On</button>
+        </div>
+      </sc-if>
+    </section>
+  </sc-if>
+
+  <!-- VIRTUAL TRY-ON PAGE -->
+  <sc-if value="{{ isTryOn }}" hint-placeholder-val="{{ false }}">
+    <section style="padding:60px 24px 100px;max-width:1000px;margin:0 auto;">
+      <div style="text-align:center;margin-bottom:36px;">
+        <div style="color:#c9a769;font-size:12px;letter-spacing:2px;margin-bottom:10px;">AI-POWERED</div>
+        <h1 style="font-family:'Playfair Display',serif;font-size:38px;font-weight:600;margin:0 0 14px;">Virtual Try-On</h1>
+        <p style="color:#a39c8e;font-size:15px;margin:0;">Upload your photo and preview your selected style before generating your virtual try-on.</p>
+      </div>
+
+      <div style="display:flex;align-items:center;justify-content:center;margin-bottom:48px;flex-wrap:wrap;">
+        <sc-for list="{{ tryonSteps }}" as="st" hint-placeholder-count="2">
+          <div style="display:flex;align-items:center;">
+            <div style="display:flex;align-items:center;gap:8px;padding:9px 18px;border-radius:999px;background:{{ st.bg }};">
+              <div style="width:20px;height:20px;border-radius:50%;background:{{ st.numBg }};color:{{ st.numColor }};font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">{{ st.n }}</div>
+              <span style="font-size:13.5px;font-weight:600;color:{{ st.textColor }};white-space:nowrap;">{{ st.label }}</span>
+            </div>
+            <sc-if value="{{ st.showLine }}" hint-placeholder-val="{{ true }}">
+              <div style="width:36px;height:1px;background:rgba(255,255,255,0.15);margin:0 8px;"></div>
+            </sc-if>
+          </div>
+        </sc-for>
+      </div>
+
+      <!-- STEP 1: PHOTO -->
+      <sc-if value="{{ isStep1 }}" hint-placeholder-val="{{ true }}">
+        <div style="max-width:880px;margin:0 auto;">
+          <div style="text-align:center;margin-bottom:24px;">
+            <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:600;margin-bottom:6px;">Your Photo</div>
+            <div style="color:#8a8478;font-size:14px;">Upload a full-body photo and confirm the style you want to try on.</div>
+          </div>
+          <sc-if value="{{ hasTryOnError }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;align-items:flex-start;gap:10px;background:rgba(201,80,66,0.1);border:1px solid rgba(201,80,66,0.35);border-radius:12px;padding:14px 16px;margin:0 auto 20px;max-width:760px;text-align:left;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#e08a7c" stroke-width="2" style="flex-shrink:0;margin-top:2px;"><circle cx="12" cy="12" r="10"/><path d="M12 8v5M12 16h.01"/></svg>
+              <div style="font-size:13.5px;color:#e0b3ab;line-height:1.5;">{{ tryOnError }}</div>
+            </div>
+          </sc-if>
+          <div class="vt-grid-2" style="display:grid;grid-template-columns:minmax(0,1.2fr) minmax(280px,.8fr);gap:22px;align-items:start;">
+            <div>
+              <div class="vt-photo-box" style="border:1px dashed rgba(255,255,255,0.18);border-radius:16px;height:520px;overflow:hidden;background:#101009;position:relative;display:flex;align-items:center;justify-content:center;" onDragOver="{{ onPhotoDragOver }}" onDrop="{{ onPhotoDrop }}">
+                <sc-if value="{{ hasUserPhoto }}" hint-placeholder-val="{{ false }}">
+                  <img src="{{ userPhotoDataUrl }}" alt="Your photo" style="max-width:100%;max-height:100%;object-fit:contain;display:block;">
+                  <button style="position:absolute;top:12px;right:12px;background:rgba(0,0,0,0.6);color:#f2ede4;border:1px solid rgba(255,255,255,0.15);border-radius:999px;padding:8px 14px;font-size:12.5px;cursor:pointer;" onClick="{{ clearUserPhoto }}">Remove</button>
+                </sc-if>
+                <sc-if value="{{ hasNoUserPhoto }}" hint-placeholder-val="{{ true }}">
+                  <label style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;cursor:pointer;gap:12px;color:#8a8478;text-align:center;padding:24px;box-sizing:border-box;">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#8a8478" stroke-width="1.6"><path d="M12 3v12M7 8l5-5 5 5M5 21h14"/></svg>
+                    <div style="font-size:14px;max-width:340px;">Upload Your Photo — stand facing the camera in a well-lit area</div>
+                    <div style="font-size:11.5px;color:#6f6a5f;">Click to browse, or drag and drop</div>
+                    <input type="file" accept="image/*" onChange="{{ onPhotoFileChange }}" style="display:none;">
+                  </label>
+                </sc-if>
+              </div>
+            </div>
+            <div style="background:#141310;border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:22px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;">
+                <div>
+                  <div style="font-family:'Playfair Display',serif;font-size:19px;font-weight:600;margin-bottom:4px;">Selected Style</div>
+                  <div style="color:#8a8478;font-size:13px;">A small preview stays visible while you prepare your try-on.</div>
+                </div>
+                <div style="width:78px;height:98px;border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.08);background:#1b1a17;flex-shrink:0;">
+                  <sc-if value="{{ hasSelectedSuit }}" hint-placeholder-val="{{ false }}">
+                    <image-slot id="{{ selectedSuitSlot }}" shape="rect" fit="contain" src="{{ selectedSuitImg }}"></image-slot>
+                  </sc-if>
+                  <sc-if value="{{ hasNoSelectedSuit }}" hint-placeholder-val="{{ true }}">
+                    <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.01));">
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6f6a5f" stroke-width="1.7"><path d="M8 6h8l1.5 3H20v2h-1l-1 8.5a2 2 0 01-2 1.5H8a2 2 0 01-2-1.5L5 11H4V9h2.5L8 6z"/></svg>
+                    </div>
+                  </sc-if>
+                </div>
+              </div>
+              <sc-if value="{{ hasSelectedSuit }}" hint-placeholder-val="{{ false }}">
+                <div style="border:1px solid rgba(201,167,105,0.16);background:rgba(201,167,105,0.06);border-radius:14px;padding:16px;margin-bottom:16px;">
+                  <div style="font-size:11px;letter-spacing:1.4px;color:#c9a769;margin-bottom:8px;">READY TO TRY ON</div>
+                  <div style="font-weight:600;font-size:16px;margin-bottom:5px;">{{ selectedSuitName }}</div>
+                  <div style="font-size:12.5px;color:#8a8478;margin-bottom:12px;">{{ selectedSuitBrand }} · {{ selectedSuitCategory }}</div>
+                  <div style="display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border-radius:999px;background:#1f1d18;color:#c9a769;font-size:12px;font-weight:600;">{{ selectedSuitPrice }}</div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ hasNoSelectedSuit }}" hint-placeholder-val="{{ true }}">
+                <div style="border:1px dashed rgba(255,255,255,0.12);border-radius:14px;padding:18px;margin-bottom:16px;text-align:center;color:#8a8478;font-size:13.5px;line-height:1.6;">
+                  Pick a style from the collection and it will appear here before you generate the try-on.
+                </div>
+              </sc-if>
+              <div style="display:flex;flex-direction:column;gap:10px;">
+                <button style="background:#1f1d18;color:#f2ede4;border:1px solid rgba(255,255,255,0.1);border-radius:999px;padding:13px 20px;font-weight:600;font-size:14px;cursor:pointer;" onClick="{{ goCatalog }}">{{ suitActionLabel }}</button>
+                <button style="background:{{ step1ContinueBg }};color:#211a0e;border:none;border-radius:999px;padding:14px 20px;font-weight:700;font-size:14.5px;cursor:{{ step1ContinueCursor }};" onClick="{{ startLook }}">See My Look</button>
+              </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- STEP 2: RESULT -->
+      <sc-if value="{{ isStep2 }}" hint-placeholder-val="{{ false }}">
+        <sc-if value="{{ isProcessing }}" hint-placeholder-val="{{ false }}">
+          <div style="text-align:center;padding:80px 0;">
+            <div style="width:64px;height:64px;border-radius:50%;border:3px solid rgba(201,167,105,0.2);border-top-color:#c9a769;margin:0 auto 26px;animation:vt-spin 1s linear infinite;"></div>
+            <div style="font-weight:600;font-size:17px;margin-bottom:8px;">Placing the suit on your photo…</div>
+            <div style="color:#8a8478;font-size:13.5px;animation:vt-pulse 1.6s ease-in-out infinite;">Our AI is analyzing fit, lighting, and pose — this can take up to a couple of minutes</div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ isNotProcessing }}" hint-placeholder-val="{{ true }}">
+          <div>
+            <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:600;margin-bottom:6px;text-align:center;">Your Look</div>
+            <div style="color:#8a8478;font-size:14px;margin-bottom:26px;text-align:center;">{{ selectedSuitName }}</div>
+            <div style="display:flex;gap:20px;justify-content:center;margin-bottom:30px;">
+              <div style="width:100%;max-width:320px;height:440px;border-radius:14px;overflow:hidden;position:relative;border:1px solid rgba(255,255,255,0.08);background:#101009;">
+                <img src="{{ resultImageUrl }}" alt="AI-generated try-on result" style="width:100%;height:100%;object-fit:cover;display:block;">
+                <div style="position:absolute;top:12px;left:12px;background:rgba(201,167,105,0.9);color:#1a1710;font-size:10.5px;font-weight:700;padding:4px 10px;border-radius:999px;">AI TRY-ON</div>
+                <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(0deg,rgba(0,0,0,0.75),transparent);padding:14px;display:flex;align-items:center;gap:10px;">
+                  <div style="width:44px;height:44px;border-radius:8px;overflow:hidden;border:1px solid rgba(255,255,255,0.2);flex-shrink:0;">
+                    <image-slot id="{{ selectedSuitSlot }}" shape="rect" fit="contain" src="{{ selectedSuitImg }}"></image-slot>
+                  </div>
+                  <div>
+                    <div style="font-size:12.5px;font-weight:600;">{{ selectedSuitName }}</div>
+                    <div style="font-size:11.5px;color:#c9a769;">{{ selectedSuitPrice }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap;">
+              <button style="background:transparent;border:1px solid rgba(255,255,255,0.15);color:#f2ede4;border-radius:999px;padding:12px 22px;font-size:14px;cursor:pointer;" onClick="{{ toStep1 }}">Use Another Photo</button>
+              <button style="background:#1f1d18;border:1px solid rgba(255,255,255,0.1);color:#f2ede4;border-radius:999px;padding:12px 22px;font-size:14px;cursor:pointer;" onClick="{{ goCatalog }}">Choose Another Suit</button>
+              <button style="background:linear-gradient(180deg,#d8b878,#b5904f);color:#211a0e;border:none;border-radius:999px;padding:12px 26px;font-weight:700;font-size:14px;cursor:pointer;" onClick="{{ saveTryOn }}">{{ saveLabel }}</button>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+    </section>
+  </sc-if>
+
+  <!-- FOOTER -->
+  <footer style="border-top:1px solid rgba(255,255,255,0.07);padding:56px 48px 28px;">
+    <div class="vt-footer-grid" style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:40px;max-width:1400px;margin:0 auto 40px;">
+      <div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+          <img src="assets/bb-logo-mark.png" alt="BB Apparel" style="height:30px;width:auto;display:block;">
+          <div style="font-family:'Playfair Display',serif;font-weight:600;font-size:14px;">BB APPAREL</div>
+        </div>
+        <p style="color:#8a8478;font-size:13.5px;line-height:1.6;max-width:340px;">Upload your photo and virtually try on any style from our collection. Find your perfect look before you buy — powered by AI.</p>
+      </div>
+      <div>
+        <div style="font-weight:600;font-size:13.5px;margin-bottom:16px;">Explore</div>
+        <div style="display:flex;flex-direction:column;gap:11px;font-size:13.5px;color:#8a8478;">
+          <a href="#" onClick="{{ goCatalog }}" style="color:#8a8478;text-decoration:none;">Catalog</a>
+          <a href="#" onClick="{{ openTryOnFresh }}" style="color:#8a8478;text-decoration:none;">Virtual Try-On</a>
+          <a href="#" onClick="{{ goSize }}" style="color:#8a8478;text-decoration:none;">Size Finder</a>
+          <a href="#" onClick="{{ goSaved }}" style="color:#8a8478;text-decoration:none;">My Try-Ons</a>
+        </div>
+      </div>
+      <div>
+        <div style="font-weight:600;font-size:13.5px;margin-bottom:16px;">Company</div>
+        <div style="display:flex;flex-direction:column;gap:11px;font-size:13.5px;color:#8a8478;">
+          <a href="#" style="color:#8a8478;text-decoration:none;">About Us</a>
+          <a href="#" style="color:#8a8478;text-decoration:none;">Contact</a>
+          <a href="#" style="color:#8a8478;text-decoration:none;">Privacy Policy</a>
+          <a href="#" style="color:#8a8478;text-decoration:none;">Terms of Service</a>
+        </div>
+      </div>
+    </div>
+    <div class="vt-footer-bottom" style="border-top:1px solid rgba(255,255,255,0.06);padding-top:22px;display:flex;justify-content:space-between;max-width:1400px;margin:0 auto;font-size:12px;color:#6f6a5f;gap:8px;flex-wrap:wrap;">
+      <div>© 2026 BB APPAREL. All rights reserved.</div>
+      <div>Powered by AI Virtual Try-On Technology</div>
+    </div>
+  </footer>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const RAW_SUITS = [
+  {id:'s1', slotId:'suit-1', name:'Chocolate Brown Pantsuit', brand:'Sean Alexander', price:'$359', fitType:'Slim Fit', tags:['Slim Fit','Solid','2PC'], category:'Suits', img:'assets/suit-1.jpg'},
+  {id:'s2', slotId:'suit-2', name:'Mauve Peplum Suit', brand:'Bryan Michaels', price:'$339', fitType:'Slim Fit', tags:['Slim Fit','Peplum','2PC'], category:'Suits', img:'assets/suit-2.png'},
+  {id:'s3', slotId:'suit-3', name:'Sage Double-Breasted Blazer', brand:'Bryan Michaels', price:'$429', fitType:'Classic Fit', tags:['Classic Fit','Solid','2PC'], category:'Blazers', img:'assets/suit-3.jpg'},
+  {id:'s4', slotId:'suit-4', name:'Emerald Stripe Blouse Set', brand:'Stacy Adams', price:'$229', fitType:'Hybrid Fit', tags:['Hybrid Fit','Striped','2PC'], category:'Sets', img:'assets/suit-4.jpg'},
+  {id:'s5', slotId:'suit-5', name:'Sage Wrap Blouse Set', brand:'Stacy Adams', price:'$389', fitType:'Slim Fit', tags:['Slim Fit','Solid','2PC'], category:'Sets', img:'assets/suit-5.jpg'},
+  {id:'s6', slotId:'suit-6', name:'Gilded Stripe Blouse Set', brand:'Sean Alexander', price:'$349', fitType:'Slim Fit', tags:['Slim Fit','Striped','2PC'], category:'Sets', img:'assets/suit-6.jpg'},
+  {id:'s7', slotId:'suit-7', name:'Charcoal Double-Breasted Suit', brand:'Bryan Michaels', price:'$329', fitType:'Classic Fit', tags:['Classic Fit','Solid','2PC'], category:'Suits', img:'assets/suit-7.jpg'},
+  {id:'s8', slotId:'suit-8', name:'Safia Print Occasion Dress', brand:'Stacy Adams', price:'$379', fitType:'Hybrid Fit', tags:['Hybrid Fit','Printed','1PC'], category:'Dresses', img:'assets/suit-8.jpg'},
+  {id:'s9', slotId:'suit-9', name:'Emerald Leaf Print Dress', brand:'Sean Alexander', price:'$299', fitType:'Slim Fit', tags:['Slim Fit','Floral','1PC'], category:'Dresses', img:'assets/suit-9.jpg'},
+  {id:'s10', slotId:'suit-10', name:'Sky Blue Double-Breasted Blazer', brand:'Bryan Michaels', price:'$249', fitType:'Slim Fit', tags:['Slim Fit','Solid','1PC'], category:'Blazers', img:'assets/suit-10.jpg'},
+  {id:'s11', slotId:'suit-11', name:'Slate Gray Power Suit', brand:'Stacy Adams', price:'$389', fitType:'Hybrid Fit', tags:['Hybrid Fit','Solid','2PC'], category:'Suits', img:'assets/suit-11.jpg'},
+  {id:'s12', slotId:'suit-12', name:'Camel Overcoat Ensemble', brand:'Bryan Michaels', price:'$319', fitType:'Slim Fit', tags:['Slim Fit','Solid','3PC'], category:'Coats', img:'assets/suit-12.jpg'},
+  {id:'s13', slotId:'suit-13', name:'Maroon Brocade Agbada Vest', brand:'Tazzio', price:'$449', fitType:'Slim Fit', tags:['Slim Fit','Brocade','2PC'], category:'Traditional Wear', img:'assets/suit-13.jpg'},
+  {id:'s14', slotId:'suit-14', name:'Heritage Plaid Three-Piece', brand:'Stacy Adams', price:'$279', fitType:'Hybrid Fit', tags:['Hybrid Fit','Plaid','3PC'], category:'Suits', img:'assets/suit-14.jpg'},
+];
+const BRANDS = ['Sean Alexander','Bryan Michaels','Stacy Adams','Tazzio'];
+const CATEGORIES = ['Suits','Blazers','Dresses','Sets','Coats','Traditional Wear'];
+const FIT_TYPES = ['Slim Fit','Classic Fit','Hybrid Fit'];
+
+// FASHN virtual try-on (https://fashn.ai) now runs through a small same-origin
+// proxy so the browser never sees the secret API key.
+const FASHN_API_BASE = '/api/fashn';
+
+async function urlToDataUrl(url) {
+  if (location.protocol === 'file:') {
+    throw new Error(
+      'This page was opened directly from disk (file://), so the browser blocks it from reading local images. ' +
+      'Run it through the local proxy server instead — e.g. "python3 server.py" in this folder, then open ' +
+      'http://localhost:8000/ in your browser.'
+    );
+  }
+  const res = await fetch(url);
+  const blob = await res.blob();
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error('Could not read ' + url));
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function runFashnTryOn(modelImage, productImage) {
+  const runRes = await fetch(`${FASHN_API_BASE}/run`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model_name: 'tryon-max',
+      inputs: { model_image: modelImage, product_image: productImage },
+    }),
+  });
+  const runJson = await runRes.json().catch(() => ({}));
+  if (!runRes.ok) {
+    throw new Error(runJson.message || runJson.error || `FASHN request failed (${runRes.status})`);
+  }
+
+  const startedAt = Date.now();
+  const timeoutMs = 150000;
+  const pollMs = 2000;
+  while (Date.now() - startedAt < timeoutMs) {
+    await new Promise((r) => setTimeout(r, pollMs));
+    const statusRes = await fetch(`${FASHN_API_BASE}/status/${runJson.id}`);
+    const statusJson = await statusRes.json().catch(() => ({}));
+    if (!statusRes.ok) {
+      throw new Error(statusJson.message || `FASHN status check failed (${statusRes.status})`);
+    }
+    if (statusJson.status === 'completed') return statusJson;
+    if (['failed', 'canceled', 'time_out'].includes(statusJson.status)) {
+      throw new Error((statusJson.error && statusJson.error.message) || `Try-on ${statusJson.status}`);
+    }
+  }
+  throw new Error('Timed out waiting for the AI result — please try again.');
+}
+
+class Component extends DCLogic {
+  state = {
+    view: 'home',
+    step: 1,
+    isProcessing: false,
+    selectedSuitId: null,
+    userPhotoDataUrl: null,
+    resultImageUrl: null,
+    tryOnError: null,
+    savedTryOns: [],
+    sizeForm: { heightFt: '', heightIn: '', weight: '', chest: '', waist: '', hips: '', inseam: '', neck: '', shoulder: '', fit: 'Modern Fit' },
+    sizeResult: null,
+    catalogSearch: '',
+    catalogCategory: 'All',
+    catalogFit: 'All',
+    catalogBrand: 'All',
+    mobileMenuOpen: false,
+  };
+
+  setCatalogSearch = (e) => this.setState({ catalogSearch: e.target.value });
+  setCatalogCategory = (v) => this.setState({ catalogCategory: v });
+  setCatalogFit = (v) => this.setState({ catalogFit: v });
+  setCatalogBrand = (v) => this.setState({ catalogBrand: v });
+
+  toggleMobileMenu = () => this.setState(s => ({ mobileMenuOpen: !s.mobileMenuOpen }));
+  closeMobileMenu = () => this.setState({ mobileMenuOpen: false });
+
+  goHome = () => this.setState({ view: 'home', mobileMenuOpen: false });
+  goCatalog = () => this.setState({ view: 'catalog', mobileMenuOpen: false });
+  goSize = () => this.setState({ view: 'sizefinder', mobileMenuOpen: false });
+  goSaved = () => this.setState({ view: 'mytryons', mobileMenuOpen: false });
+
+  openTryOnFresh = () => this.setState({
+    view: 'tryon', step: 1, isProcessing: false, tryOnError: null, resultImageUrl: null, selectedSuitId: null, mobileMenuOpen: false,
+  });
+
+  tryOnSuit = (suitId) => this.setState({
+    view: 'tryon', step: 1, selectedSuitId: suitId, isProcessing: false, tryOnError: null, resultImageUrl: null, mobileMenuOpen: false,
+  });
+
+  toStep1 = () => this.setState({ step: 1, isProcessing: false, tryOnError: null });
+
+  loadPhotoFile = (file) => {
+    if (!file || !file.type || !file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = () => this.setState({ userPhotoDataUrl: reader.result });
+    reader.readAsDataURL(file);
+  };
+  onPhotoFileChange = (e) => {
+    const file = e.target.files && e.target.files[0];
+    this.loadPhotoFile(file);
+    e.target.value = '';
+  };
+  onPhotoDrop = (e) => {
+    e.preventDefault();
+    const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    this.loadPhotoFile(file);
+  };
+  onPhotoDragOver = (e) => { e.preventDefault(); };
+  clearUserPhoto = () => this.setState({ userPhotoDataUrl: null });
+
+  startLook = async () => {
+    if (!this.state.selectedSuitId) {
+      this.setState({ tryOnError: 'Please choose a suit from the collection first.' });
+      return;
+    }
+    const suit = RAW_SUITS.find((s) => s.id === this.state.selectedSuitId);
+    const modelImage = this.state.userPhotoDataUrl;
+    if (!modelImage) {
+      this.setState({ tryOnError: 'Please upload your photo to continue.' });
+      return;
+    }
+    this.setState({ step: 2, isProcessing: true, tryOnError: null, resultImageUrl: null });
+    try {
+      const productImage = await urlToDataUrl(suit.img);
+      const result = await runFashnTryOn(modelImage, productImage);
+      this.setState({ step: 2, isProcessing: false, resultImageUrl: result.output[0] });
+    } catch (err) {
+      console.error('FASHN try-on failed:', err);
+      this.setState({
+        step: 1,
+        isProcessing: false,
+        tryOnError: (err && err.message) || 'Something went wrong. Please try again.',
+      });
+    }
+  };
+  pickSuit = (id) => this.setState({ selectedSuitId: id, tryOnError: null });
+
+  saveTryOn = () => {
+    const suit = RAW_SUITS.find(s => s.id === this.state.selectedSuitId);
+    if (!suit || !this.state.resultImageUrl) return;
+    this.setState(s => ({
+      savedTryOns: [...s.savedTryOns, { suit, time: 'Just now', resultImageUrl: s.resultImageUrl }],
+    }));
+  };
+
+  setField = (key) => (e) => this.setState(s => ({ sizeForm: { ...s.sizeForm, [key]: e.target.value } }));
+  pickFit = (fit) => this.setState(s => ({ sizeForm: { ...s.sizeForm, fit } }));
+
+  hasEnoughInfo = () => {
+    const f = this.state.sizeForm;
+    const hw = f.heightFt && f.weight;
+    const cw = f.chest && f.waist;
+    return !!(hw || cw);
+  };
+
+  calcSize = () => {
+    if (!this.hasEnoughInfo()) return;
+    const f = this.state.sizeForm;
+    const wLb = parseFloat(f.weight) || 180;
+    const chest = parseFloat(f.chest) || Math.round(36 + (wLb - 150) / 8);
+    const jacketSizes = ['36R','38R','40R','42R','44R','46R','48R'];
+    const idx = Math.min(jacketSizes.length - 1, Math.max(0, Math.round((chest - 36) / 2)));
+    const jacket = jacketSizes[idx];
+    const waist = parseFloat(f.waist) || Math.round(chest - 6);
+    const pants = Math.round(waist) + 'W';
+    this.setState({ sizeResult: { jacket, pants } });
+  };
+
+  renderVals() {
+    const s = this.state;
+    const navBg = {
+      home: s.view === 'home' ? 'rgba(201,167,105,0.14)' : 'transparent',
+      catalog: s.view === 'catalog' ? 'rgba(201,167,105,0.14)' : 'transparent',
+      size: s.view === 'sizefinder' ? 'rgba(201,167,105,0.14)' : 'transparent',
+      tryon: s.view === 'tryon' ? 'rgba(201,167,105,0.14)' : 'transparent',
+      saved: s.view === 'mytryons' ? 'rgba(201,167,105,0.14)' : 'transparent',
+    };
+    const navColor = {
+      home: s.view === 'home' ? '#c9a769' : '#c7c1b4',
+      catalog: s.view === 'catalog' ? '#c9a769' : '#c7c1b4',
+      size: s.view === 'sizefinder' ? '#c9a769' : '#c7c1b4',
+      tryon: s.view === 'tryon' ? '#c9a769' : '#c7c1b4',
+      saved: s.view === 'mytryons' ? '#c9a769' : '#c7c1b4',
+    };
+
+    const suits = RAW_SUITS.map(suit => ({
+      ...suit,
+      pickBorder: s.selectedSuitId === suit.id ? '#c9a769' : 'transparent',
+      pick: () => this.pickSuit(suit.id),
+      tryOn: () => this.tryOnSuit(suit.id),
+    }));
+
+    const selectedSuit = RAW_SUITS.find(x => x.id === s.selectedSuitId);
+
+    const pillStyle = (label, active) => ({
+      label, bg: active ? '#c9a769' : '#1b1a17', color: active ? '#211a0e' : '#a39c8e',
+    });
+    const categoryPills = ['All', ...CATEGORIES].map(c => ({ ...pillStyle(c, s.catalogCategory === c), select: () => this.setCatalogCategory(c) }));
+    const fitPills = ['All', ...FIT_TYPES].map(f => ({ ...pillStyle(f, s.catalogFit === f), select: () => this.setCatalogFit(f) }));
+    const brandPills = ['All', ...BRANDS].map(b => ({ ...pillStyle(b, s.catalogBrand === b), select: () => this.setCatalogBrand(b) }));
+
+    const searchLower = s.catalogSearch.trim().toLowerCase();
+    const filteredSuitsRaw = RAW_SUITS.filter(suit => {
+      if (s.catalogCategory !== 'All' && suit.category !== s.catalogCategory) return false;
+      if (s.catalogFit !== 'All' && suit.fitType !== s.catalogFit) return false;
+      if (s.catalogBrand !== 'All' && suit.brand !== s.catalogBrand) return false;
+      if (searchLower && !suit.name.toLowerCase().includes(searchLower) && !suit.brand.toLowerCase().includes(searchLower)) return false;
+      return true;
+    });
+    const filteredSuits = filteredSuitsRaw.map(suit => ({
+      ...suit,
+      tryOn: () => this.tryOnSuit(suit.id),
+    }));
+
+    const fitOptions = ['Slim Fit','Modern Fit','Classic Fit'].map(label => ({
+      label,
+      select: () => this.pickFit(label),
+      bg: s.sizeForm.fit === label ? 'rgba(201,167,105,0.14)' : '#1b1a17',
+      color: s.sizeForm.fit === label ? '#c9a769' : '#a39c8e',
+      border: s.sizeForm.fit === label ? '#c9a769' : 'rgba(255,255,255,0.08)',
+    }));
+
+    const stepLabels = ['Your Photo','Your Look'];
+    const tryonSteps = [1,2].map(n => {
+      const active = s.step === n;
+      const done = s.step > n;
+      return {
+        n, label: stepLabels[n - 1], showLine: n < 2,
+        bg: active ? '#c9a769' : (done ? 'rgba(201,167,105,0.14)' : '#1b1a17'),
+        numBg: active ? '#211a0e' : (done ? '#c9a769' : 'rgba(255,255,255,0.12)'),
+        numColor: active ? '#c9a769' : (done ? '#211a0e' : '#8a8478'),
+        textColor: active ? '#211a0e' : (done ? '#c9a769' : '#8a8478'),
+      };
+    });
+
+    return {
+      isHome: s.view === 'home',
+      isCatalog: s.view === 'catalog',
+      isSize: s.view === 'sizefinder',
+      isSaved: s.view === 'mytryons',
+      isTryOn: s.view === 'tryon',
+      navBg, navColor,
+      goHome: this.goHome, goCatalog: this.goCatalog, goSize: this.goSize, goSaved: this.goSaved,
+      openTryOnFresh: this.openTryOnFresh,
+      mobileMenuOpen: s.mobileMenuOpen,
+      mobileMenuClosed: !s.mobileMenuOpen,
+      toggleMobileMenu: this.toggleMobileMenu,
+      hasSaved: s.savedTryOns.length > 0,
+      hasSavedNot: s.savedTryOns.length === 0,
+      savedBadge: s.savedTryOns.length > 0 ? `(${s.savedTryOns.length})` : '',
+      savedTryOns: s.savedTryOns,
+      suits,
+      catalogSearch: s.catalogSearch, setCatalogSearch: this.setCatalogSearch,
+      categoryPills, fitPills, brandPills,
+      filteredSuits, filteredCount: filteredSuits.length,
+      fitOptions,
+      sizeForm: s.sizeForm,
+      sizeResult: s.sizeResult,
+      sizeWarning: !this.hasEnoughInfo(),
+      findSizeBg: this.hasEnoughInfo() ? 'linear-gradient(180deg,#d8b878,#b5904f)' : 'rgba(201,167,105,0.35)',
+      setField: {
+        heightFt: this.setField('heightFt'), heightIn: this.setField('heightIn'),
+        weight: this.setField('weight'), chest: this.setField('chest'),
+        waist: this.setField('waist'), hips: this.setField('hips'),
+        inseam: this.setField('inseam'), neck: this.setField('neck'),
+        shoulder: this.setField('shoulder'),
+      },
+      calcSize: this.calcSize,
+      isStep1: s.step === 1, isStep2: s.step === 2,
+      isProcessing: s.isProcessing, isNotProcessing: !s.isProcessing,
+      toStep1: this.toStep1, startLook: this.startLook,
+      tryonSteps,
+      hasUserPhoto: !!s.userPhotoDataUrl,
+      hasNoUserPhoto: !s.userPhotoDataUrl,
+      userPhotoDataUrl: s.userPhotoDataUrl,
+      onPhotoFileChange: this.onPhotoFileChange,
+      onPhotoDrop: this.onPhotoDrop,
+      onPhotoDragOver: this.onPhotoDragOver,
+      clearUserPhoto: this.clearUserPhoto,
+      step1ContinueBg: (s.userPhotoDataUrl && selectedSuit) ? 'linear-gradient(180deg,#d8b878,#b5904f)' : 'rgba(255,255,255,0.1)',
+      step1ContinueCursor: (s.userPhotoDataUrl && selectedSuit) ? 'pointer' : 'not-allowed',
+      continueBg: s.selectedSuitId ? 'linear-gradient(180deg,#d8b878,#b5904f)' : 'rgba(255,255,255,0.1)',
+      continueCursor: s.selectedSuitId ? 'pointer' : 'not-allowed',
+      hasTryOnError: !!s.tryOnError,
+      tryOnError: s.tryOnError,
+      resultImageUrl: s.resultImageUrl,
+      hasSelectedSuit: !!selectedSuit,
+      hasNoSelectedSuit: !selectedSuit,
+      selectedSuitName: selectedSuit ? selectedSuit.name : '',
+      selectedSuitBrand: selectedSuit ? selectedSuit.brand : '',
+      selectedSuitCategory: selectedSuit ? selectedSuit.category : '',
+      selectedSuitPrice: selectedSuit ? selectedSuit.price : '',
+      selectedSuitSlot: selectedSuit ? selectedSuit.slotId : 'suit-1',
+      selectedSuitImg: selectedSuit ? selectedSuit.img : '',
+      suitActionLabel: selectedSuit ? 'Choose Another Suit' : 'Browse Collection',
+      saveLabel: s.savedTryOns.some(t => t.suit.id === s.selectedSuitId) ? 'Saved ✓' : 'Save to My Try-Ons',
+      saveTryOn: this.saveTryOn,
+    };
+  }
+}
+</script>
+</body>
+</html>

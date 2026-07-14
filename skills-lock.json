@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "fashn": {
+      "source": "fashn-ai/fashn-skill",
+      "sourceType": "github",
+      "skillPath": "skills/fashn/SKILL.md",
+      "computedHash": "4ab7b4aa8c86c9bda4621643f453e47fffe56606d51e66ead4bae4a487e374ac"
+    }
+  }
+}

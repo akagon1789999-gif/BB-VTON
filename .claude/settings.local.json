@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 \"/private/tmp/claude-501/-Users-theunitychurch-Documents-BB-Virtual-try-on-development/648dd3a3-c026-4ad7-a2ae-60bdfaed57ae/scratchpad/make_icons.py\")",
+      "Bash(find /private/tmp/claude-501 -newer \"/Users/theunitychurch/Documents/BB Virtual try-on development/manifest.webmanifest\" -iname \"*.png\" -o -newer \"/Users/theunitychurch/Documents/BB Virtual try-on development/manifest.webmanifest\" -iname \"*.jpg\" 2>/dev/null | grep -v node_modules | head -20 *)",
+      "Bash(find \"/Users/theunitychurch/Library/Application Support/Claude/claude-code-sessions\" -maxdepth 6 2>/dev/null | head -50)",
+      "Bash(python3 -c ' *)",
+      "Bash(python3)",
+      "Bash(python3 -m pip install --quiet numpy)",
+      "Bash(python3 -c \"import numpy; print\\('ok', numpy.__version__\\)\")"
+    ]
+  }
+}
