@@ -471,8 +471,7 @@
       </div>
 
       <!-- STEP 1: PHOTO -->
-      <sc-if value="{{ isStep1 }}" hint-placeholder-val="{{ true }}">
-        <div style="max-width:880px;margin:0 auto;">
+        <div style="max-width:880px;margin:0 auto;display:{{ step1Display }};">
           <div style="text-align:center;margin-bottom:24px;">
             <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:600;margin-bottom:6px;">Your Photo</div>
             <div style="color:#8a8478;font-size:14px;">Upload a full-body photo and confirm the style you want to try on.</div>
@@ -536,19 +535,15 @@
               </div>
           </div>
         </div>
-      </sc-if>
 
       <!-- STEP 2: RESULT -->
-      <sc-if value="{{ isStep2 }}" hint-placeholder-val="{{ false }}">
-        <sc-if value="{{ isProcessing }}" hint-placeholder-val="{{ false }}">
-          <div style="text-align:center;padding:80px 0;">
+        <div style="display:{{ step2Display }};">
+          <div style="text-align:center;padding:80px 0;display:{{ processingDisplay }};">
             <div style="width:64px;height:64px;border-radius:50%;border:3px solid rgba(201,167,105,0.2);border-top-color:#c9a769;margin:0 auto 26px;animation:vt-spin 1s linear infinite;"></div>
             <div style="font-weight:600;font-size:17px;margin-bottom:8px;">Placing the suit on your photo…</div>
             <div style="color:#8a8478;font-size:13.5px;animation:vt-pulse 1.6s ease-in-out infinite;">Our AI is analyzing fit, lighting, and pose — this can take up to a couple of minutes</div>
           </div>
-        </sc-if>
-        <sc-if value="{{ isNotProcessing }}" hint-placeholder-val="{{ true }}">
-          <div>
+          <div style="display:{{ notProcessingDisplay }};">
             <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:600;margin-bottom:6px;text-align:center;">Your Look</div>
             <div style="color:#8a8478;font-size:14px;margin-bottom:26px;text-align:center;">{{ selectedSuitName }}</div>
             <div style="display:flex;gap:20px;justify-content:center;margin-bottom:30px;">
@@ -572,8 +567,7 @@
               <button style="background:linear-gradient(180deg,#d8b878,#b5904f);color:#211a0e;border:none;border-radius:999px;padding:12px 26px;font-weight:700;font-size:14px;cursor:pointer;" onClick="{{ saveTryOn }}">{{ saveLabel }}</button>
             </div>
           </div>
-        </sc-if>
-      </sc-if>
+        </div>
     </section>
   </sc-if>
 
@@ -910,6 +904,10 @@ class Component extends DCLogic {
       calcSize: this.calcSize,
       isStep1: s.step === 1, isStep2: s.step === 2,
       isProcessing: s.isProcessing, isNotProcessing: !s.isProcessing,
+      step1Display: s.step === 1 ? 'block' : 'none',
+      step2Display: s.step === 2 ? 'block' : 'none',
+      processingDisplay: s.isProcessing ? 'block' : 'none',
+      notProcessingDisplay: !s.isProcessing ? 'block' : 'none',
       toStep1: this.toStep1, startLook: this.startLook,
       tryonSteps,
       hasUserPhoto: !!s.userPhotoDataUrl,
