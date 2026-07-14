@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BB Apparel — Catalog Admin</title>
+<link rel="icon" href="./icons/icon-192.png" type="image/png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;}
+  body{margin:0;background:#0b0b0a;color:#f2ede4;font-family:Inter,sans-serif;min-height:100vh;}
+  h1,h2{font-family:'Playfair Display',serif;font-weight:600;margin:0;}
+  input,select,button,textarea{font-family:inherit;}
+  .wrap{max-width:1100px;margin:0 auto;padding:40px 24px 80px;}
+  .login-wrap{max-width:360px;margin:14vh auto 0;padding:0 24px;text-align:center;}
+  .login-card{background:#141310;border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:32px 28px;}
+  .field{margin-bottom:16px;text-align:left;}
+  label{display:block;font-size:12.5px;color:#a39c8e;margin-bottom:6px;}
+  input[type=text], input[type=password], input[type=number], select, textarea{
+    width:100%;background:#1b1a17;border:1px solid rgba(255,255,255,0.1);color:#f2ede4;
+    border-radius:10px;padding:11px 13px;font-size:14px;outline:none;
+  }
+  input:focus, select:focus, textarea:focus{border-color:#c9a769;}
+  .btn-primary{background:linear-gradient(180deg,#d8b878,#b5904f);color:#211a0e;border:none;border-radius:999px;padding:12px 22px;font-weight:700;font-size:14px;cursor:pointer;}
+  .btn-secondary{background:#1f1d18;border:1px solid rgba(255,255,255,0.1);color:#f2ede4;border-radius:999px;padding:11px 20px;font-weight:600;font-size:13.5px;cursor:pointer;}
+  .btn-danger{background:transparent;border:1px solid rgba(220,90,90,0.4);color:#e08a8a;border-radius:999px;padding:9px 16px;font-size:12.5px;cursor:pointer;}
+  .error{color:#e08a8a;font-size:13px;margin-top:10px;min-height:16px;}
+  header.top{display:flex;align-items:center;justify-content:space-between;margin-bottom:32px;flex-wrap:wrap;gap:12px;}
+  .card{background:#141310;border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:24px;}
+  .form-grid{display:grid;grid-template-columns:220px 1fr;gap:24px;}
+  .dropzone{border:1px dashed rgba(255,255,255,0.2);border-radius:12px;height:220px;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#101009;cursor:pointer;position:relative;}
+  .dropzone img{width:100%;height:100%;object-fit:contain;}
+  .dropzone .hint{color:#8a8478;font-size:12.5px;text-align:center;padding:0 16px;}
+  .fields-2col{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:18px;margin-top:28px;}
+  .item-card{background:#141310;border:1px solid rgba(255,255,255,0.07);border-radius:14px;overflow:hidden;}
+  .item-card .thumb{height:200px;background:#1b1a17;position:relative;}
+  .item-card .thumb img{width:100%;height:100%;object-fit:contain;object-position:center top;display:block;}
+  .item-card .body{padding:14px;}
+  .item-card .name{font-weight:600;font-size:14.5px;margin-bottom:2px;}
+  .item-card .meta{color:#8a8478;font-size:12px;margin-bottom:10px;}
+  .item-card .price{color:#c9a769;font-weight:700;font-size:14.5px;margin-bottom:12px;}
+  .item-card .actions{display:flex;gap:8px;}
+  .empty{text-align:center;padding:60px 20px;color:#8a8478;border:1px dashed rgba(255,255,255,0.1);border-radius:16px;margin-top:28px;}
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px;}
+  .modal{background:#141310;border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:28px;max-width:520px;width:100%;max-height:90vh;overflow:auto;}
+  .hidden{display:none !important;}
+  a.back-link{color:#a39c8e;font-size:13px;text-decoration:none;}
+  @media (max-width:700px){ .form-grid{grid-template-columns:1fr;} .fields-2col{grid-template-columns:1fr;} }
+</style>
+</head>
+<body>
+
+<div id="login-view" class="login-wrap">
+  <div class="login-card">
+    <h1 style="font-size:22px;margin-bottom:6px;">BB Admin</h1>
+    <div style="color:#8a8478;font-size:13px;margin-bottom:22px;">Enter the admin password to manage the catalog.</div>
+    <div class="field">
+      <input type="password" id="password-input" placeholder="Admin password" autocomplete="current-password">
+    </div>
+    <button class="btn-primary" style="width:100%;" id="login-btn">Unlock</button>
+    <div class="error" id="login-error"></div>
+  </div>
+</div>
+
+<div id="dashboard-view" class="wrap hidden">
+  <header class="top">
+    <div>
+      <a class="back-link" href="./index.html">← Back to site</a>
+      <h1 style="font-size:28px;margin-top:6px;">Catalog Admin</h1>
+    </div>
+    <button class="btn-secondary" id="logout-btn">Log out</button>
+  </header>
+
+  <div class="card">
+    <h2 style="font-size:18px;margin-bottom:20px;">Add New Item</h2>
+    <form id="create-form">
+      <div class="form-grid">
+        <div>
+          <div class="dropzone" id="dropzone">
+            <img id="preview-img" class="hidden">
+            <div class="hint" id="dropzone-hint">Click to upload a photo<br>JPG, PNG, or WEBP</div>
+          </div>
+          <input type="file" id="image-input" accept="image/jpeg,image/png,image/webp" class="hidden">
+        </div>
+        <div>
+          <div class="fields-2col">
+            <div class="field">
+              <label>Name</label>
+              <input type="text" id="name-input" placeholder="e.g. Ivory Wrap Gown" required>
+            </div>
+            <div class="field">
+              <label>Brand</label>
+              <input type="text" id="brand-input" placeholder="e.g. Sean Alexander">
+            </div>
+            <div class="field">
+              <label>Price (₦)</label>
+              <input type="number" id="price-input" placeholder="e.g. 359" min="0" required>
+            </div>
+            <div class="field">
+              <label>Fit Type</label>
+              <input type="text" id="fittype-input" list="fittype-options" placeholder="e.g. Slim Fit">
+              <datalist id="fittype-options"></datalist>
+            </div>
+            <div class="field">
+              <label>Category</label>
+              <input type="text" id="category-input" list="category-options" placeholder="e.g. Suits">
+              <datalist id="category-options"></datalist>
+            </div>
+            <div class="field">
+              <label>Tags (comma separated)</label>
+              <input type="text" id="tags-input" placeholder="e.g. Slim Fit, Solid, 2PC">
+            </div>
+          </div>
+          <button type="submit" class="btn-primary" id="create-submit-btn">Add to Catalog</button>
+          <div class="error" id="create-error"></div>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div id="items-grid" class="grid"></div>
+  <div id="empty-state" class="empty hidden">No items in the catalog yet.</div>
+</div>
+
+<div id="edit-overlay" class="modal-overlay hidden">
+  <div class="modal">
+    <h2 style="font-size:18px;margin-bottom:20px;">Edit Item</h2>
+    <form id="edit-form">
+      <div class="dropzone" id="edit-dropzone" style="height:180px;margin-bottom:16px;">
+        <img id="edit-preview-img">
+      </div>
+      <input type="file" id="edit-image-input" accept="image/jpeg,image/png,image/webp" class="hidden">
+      <div class="fields-2col">
+        <div class="field">
+          <label>Name</label>
+          <input type="text" id="edit-name-input" required>
+        </div>
+        <div class="field">
+          <label>Brand</label>
+          <input type="text" id="edit-brand-input">
+        </div>
+        <div class="field">
+          <label>Price (₦)</label>
+          <input type="number" id="edit-price-input" min="0" required>
+        </div>
+        <div class="field">
+          <label>Fit Type</label>
+          <input type="text" id="edit-fittype-input">
+        </div>
+        <div class="field">
+          <label>Category</label>
+          <input type="text" id="edit-category-input">
+        </div>
+        <div class="field">
+          <label>Tags (comma separated)</label>
+          <input type="text" id="edit-tags-input">
+        </div>
+      </div>
+      <div class="error" id="edit-error"></div>
+      <div style="display:flex;gap:10px;margin-top:6px;">
+        <button type="submit" class="btn-primary">Save Changes</button>
+        <button type="button" class="btn-secondary" id="edit-cancel-btn">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  const FIT_TYPES = ['Slim Fit', 'Classic Fit', 'Hybrid Fit'];
+  const CATEGORIES = ['Suits', 'Blazers', 'Dresses', 'Sets', 'Coats', 'Traditional Wear'];
+
+  let authHeader = sessionStorage.getItem('bbAdminAuth') || '';
+  let editingItem = null;
+
+  const $ = (id) => document.getElementById(id);
+
+  FIT_TYPES.forEach(v => { $('fittype-options').innerHTML += `<option value="${v}">`; });
+  CATEGORIES.forEach(v => { $('category-options').innerHTML += `<option value="${v}">`; });
+
+  function showDashboard() {
+    $('login-view').classList.add('hidden');
+    $('dashboard-view').classList.remove('hidden');
+    loadCatalog();
+  }
+
+  function showLogin(message) {
+    $('dashboard-view').classList.add('hidden');
+    $('login-view').classList.remove('hidden');
+    $('login-error').textContent = message || '';
+  }
+
+  async function tryAuth(password) {
+    authHeader = 'Basic ' + btoa('admin:' + password);
+    const res = await fetch('/api/admin/ping', { headers: { Authorization: authHeader } });
+    if (res.ok) {
+      sessionStorage.setItem('bbAdminAuth', authHeader);
+      showDashboard();
+    } else {
+      authHeader = '';
+      sessionStorage.removeItem('bbAdminAuth');
+      $('login-error').textContent = 'Incorrect password.';
+    }
+  }
+
+  $('login-btn').addEventListener('click', () => {
+    const password = $('password-input').value;
+    if (!password) return;
+    tryAuth(password);
+  });
+  $('password-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') $('login-btn').click();
+  });
+  $('logout-btn').addEventListener('click', () => {
+    sessionStorage.removeItem('bbAdminAuth');
+    authHeader = '';
+    showLogin();
+  });
+
+  let selectedFile = null;
+  $('dropzone').addEventListener('click', () => $('image-input').click());
+  $('image-input').addEventListener('change', (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    selectedFile = file;
+    const reader = new FileReader();
+    reader.onload = () => {
+      $('preview-img').src = reader.result;
+      $('preview-img').classList.remove('hidden');
+      $('dropzone-hint').classList.add('hidden');
+    };
+    reader.readAsDataURL(file);
+  });
+
+  $('create-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    $('create-error').textContent = '';
+    if (!selectedFile) {
+      $('create-error').textContent = 'Please choose a photo.';
+      return;
+    }
+    const fd = new FormData();
+    fd.append('name', $('name-input').value.trim());
+    fd.append('brand', $('brand-input').value.trim());
+    fd.append('price', $('price-input').value.trim());
+    fd.append('fitType', $('fittype-input').value.trim());
+    fd.append('category', $('category-input').value.trim());
+    fd.append('tags', $('tags-input').value.trim());
+    fd.append('image', selectedFile);
+
+    const btn = $('create-submit-btn');
+    btn.disabled = true;
+    btn.textContent = 'Adding…';
+    try {
+      const res = await fetch('/api/admin/catalog', {
+        method: 'POST',
+        headers: { Authorization: authHeader },
+        body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Failed to add item.');
+      $('create-form').reset();
+      selectedFile = null;
+      $('preview-img').classList.add('hidden');
+      $('dropzone-hint').classList.remove('hidden');
+      loadCatalog();
+    } catch (err) {
+      $('create-error').textContent = err.message;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Add to Catalog';
+    }
+  });
+
+  async function loadCatalog() {
+    const res = await fetch('/api/catalog');
+    const items = await res.json();
+    const grid = $('items-grid');
+    grid.innerHTML = '';
+    $('empty-state').classList.toggle('hidden', items.length > 0);
+    items.forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'item-card';
+      card.innerHTML = `
+        <div class="thumb"><img src="${item.img}" alt=""></div>
+        <div class="body">
+          <div class="name">${escapeHtml(item.name)}</div>
+          <div class="meta">${escapeHtml(item.brand || '')} · ${escapeHtml(item.category || '')}</div>
+          <div class="price">${escapeHtml(item.price)}</div>
+          <div class="actions">
+            <button class="btn-secondary edit-btn">Edit</button>
+            <button class="btn-danger delete-btn">Delete</button>
+          </div>
+        </div>`;
+      card.querySelector('.edit-btn').addEventListener('click', () => openEdit(item));
+      card.querySelector('.delete-btn').addEventListener('click', () => deleteItem(item));
+      grid.appendChild(card);
+    });
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str == null ? '' : String(str);
+    return div.innerHTML;
+  }
+
+  async function deleteItem(item) {
+    if (!confirm(`Remove "${item.name}" from the catalog?`)) return;
+    const res = await fetch(`/api/admin/catalog/${encodeURIComponent(item.id)}`, {
+      method: 'DELETE',
+      headers: { Authorization: authHeader },
+    });
+    if (res.ok) loadCatalog();
+    else alert('Failed to delete item.');
+  }
+
+  let editSelectedFile = null;
+  function openEdit(item) {
+    editingItem = item;
+    editSelectedFile = null;
+    $('edit-name-input').value = item.name || '';
+    $('edit-brand-input').value = item.brand || '';
+    $('edit-price-input').value = (item.price || '').replace(/[^\d.]/g, '');
+    $('edit-fittype-input').value = item.fitType || '';
+    $('edit-category-input').value = item.category || '';
+    $('edit-tags-input').value = (item.tags || []).join(', ');
+    $('edit-preview-img').src = item.img;
+    $('edit-error').textContent = '';
+    $('edit-overlay').classList.remove('hidden');
+  }
+  $('edit-dropzone').addEventListener('click', () => $('edit-image-input').click());
+  $('edit-image-input').addEventListener('change', (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    editSelectedFile = file;
+    const reader = new FileReader();
+    reader.onload = () => { $('edit-preview-img').src = reader.result; };
+    reader.readAsDataURL(file);
+  });
+  $('edit-cancel-btn').addEventListener('click', () => {
+    $('edit-overlay').classList.add('hidden');
+    editingItem = null;
+  });
+
+  $('edit-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!editingItem) return;
+    $('edit-error').textContent = '';
+    const fd = new FormData();
+    fd.append('name', $('edit-name-input').value.trim());
+    fd.append('brand', $('edit-brand-input').value.trim());
+    fd.append('price', $('edit-price-input').value.trim());
+    fd.append('fitType', $('edit-fittype-input').value.trim());
+    fd.append('category', $('edit-category-input').value.trim());
+    fd.append('tags', $('edit-tags-input').value.trim());
+    if (editSelectedFile) fd.append('image', editSelectedFile);
+
+    try {
+      const res = await fetch(`/api/admin/catalog/${encodeURIComponent(editingItem.id)}`, {
+        method: 'PUT',
+        headers: { Authorization: authHeader },
+        body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Failed to save changes.');
+      $('edit-overlay').classList.add('hidden');
+      editingItem = null;
+      loadCatalog();
+    } catch (err) {
+      $('edit-error').textContent = err.message;
+    }
+  });
+
+  if (authHeader) {
+    fetch('/api/admin/ping', { headers: { Authorization: authHeader } }).then(res => {
+      if (res.ok) showDashboard();
+      else { sessionStorage.removeItem('bbAdminAuth'); authHeader = ''; showLogin(); }
+    });
+  } else {
+    showLogin();
+  }
+</script>
+</body>
+</html>

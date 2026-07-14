@@ -635,13 +635,10 @@
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script>
-const RAW_SUITS = [
+let RAW_SUITS = [
   {id:'s1', slotId:'suit-1', name:'Chocolate Brown Pantsuit', brand:'Sean Alexander', price:'₦359', fitType:'Slim Fit', tags:['Slim Fit','Solid','2PC'], category:'Suits', img:'assets/suit-1.jpg'},
   {id:'s2', slotId:'suit-2', name:'Mauve Peplum Suit', brand:'Bryan Michaels', price:'₦339', fitType:'Slim Fit', tags:['Slim Fit','Peplum','2PC'], category:'Suits', img:'assets/suit-2.png'},
   {id:'s3', slotId:'suit-3', name:'Sage Double-Breasted Blazer', brand:'Bryan Michaels', price:'₦429', fitType:'Classic Fit', tags:['Classic Fit','Solid','2PC'], category:'Blazers', img:'assets/suit-3.jpg'},
-  {id:'s4', slotId:'suit-4', name:'Emerald Stripe Blouse Set', brand:'Stacy Adams', price:'₦229', fitType:'Hybrid Fit', tags:['Hybrid Fit','Striped','2PC'], category:'Sets', img:'assets/suit-4.jpg'},
-  {id:'s5', slotId:'suit-5', name:'Sage Wrap Blouse Set', brand:'Stacy Adams', price:'₦389', fitType:'Slim Fit', tags:['Slim Fit','Solid','2PC'], category:'Sets', img:'assets/suit-5.jpg'},
-  {id:'s6', slotId:'suit-6', name:'Gilded Stripe Blouse Set', brand:'Sean Alexander', price:'₦349', fitType:'Slim Fit', tags:['Slim Fit','Striped','2PC'], category:'Sets', img:'assets/suit-6.jpg'},
   {id:'s7', slotId:'suit-7', name:'Charcoal Double-Breasted Suit', brand:'Bryan Michaels', price:'₦329', fitType:'Classic Fit', tags:['Classic Fit','Solid','2PC'], category:'Suits', img:'assets/suit-7.jpg'},
   {id:'s8', slotId:'suit-8', name:'Safia Print Occasion Dress', brand:'Stacy Adams', price:'₦379', fitType:'Hybrid Fit', tags:['Hybrid Fit','Printed','1PC'], category:'Dresses', img:'assets/suit-8.jpg'},
   {id:'s9', slotId:'suit-9', name:'Emerald Leaf Print Dress', brand:'Sean Alexander', price:'₦299', fitType:'Slim Fit', tags:['Slim Fit','Floral','1PC'], category:'Dresses', img:'assets/suit-9.jpg'},
@@ -735,6 +732,16 @@ class Component extends DCLogic {
   componentDidMount() {
     this._prevView = this.state.view;
     this._prevStep = this.state.step;
+
+    fetch('/api/catalog')
+      .then(res => (res.ok ? res.json() : null))
+      .then(data => {
+        if (Array.isArray(data) && data.length) {
+          RAW_SUITS = data;
+          this.forceUpdate();
+        }
+      })
+      .catch(() => {});
 
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
     if (isStandalone) return;

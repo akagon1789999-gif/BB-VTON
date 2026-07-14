@@ -10,7 +10,11 @@
       "Bash(python3 -c \"import numpy; print\\('ok', numpy.__version__\\)\")",
       "Bash(grep -rn \"sk_\\\\|api_key\\\\s*=\\\\s*[\\\\\"'][a-zA-Z0-9]\\\\{10,\\\\}\\\\|FASHN_API_KEY=\" --include=\"*.js\" --include=\"*.html\" --include=\"*.py\" .)",
       "Bash(npx --yes netlify-cli --version)",
-      "Bash(/private/tmp/claude-501/-Users-theunitychurch-Documents-BB-Virtual-try-on-development/33233ee0-4b70-48e5-9164-83918bc65268/scratchpad/gh-cli/gh_2.96.0_macOS_amd64/bin/gh repo *)"
+      "Bash(/private/tmp/claude-501/-Users-theunitychurch-Documents-BB-Virtual-try-on-development/33233ee0-4b70-48e5-9164-83918bc65268/scratchpad/gh-cli/gh_2.96.0_macOS_amd64/bin/gh repo *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(grep -n '\\\\$' index.html)"
     ]
   }
 }
