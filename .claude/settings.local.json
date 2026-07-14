@@ -7,7 +7,9 @@
       "Bash(python3 -c ' *)",
       "Bash(python3)",
       "Bash(python3 -m pip install --quiet numpy)",
-      "Bash(python3 -c \"import numpy; print\\('ok', numpy.__version__\\)\")"
+      "Bash(python3 -c \"import numpy; print\\('ok', numpy.__version__\\)\")",
+      "Bash(grep -rn \"sk_\\\\|api_key\\\\s*=\\\\s*[\\\\\"'][a-zA-Z0-9]\\\\{10,\\\\}\\\\|FASHN_API_KEY=\" --include=\"*.js\" --include=\"*.html\" --include=\"*.py\" .)",
+      "Bash(npx --yes netlify-cli --version)"
     ]
   }
 }
