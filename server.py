@@ -167,6 +167,35 @@ def fashn_status(prediction_id):
     return proxy_to_fashn(f"/status/{prediction_id}", method="GET")
 
 
+@app.post("/api/admin/video/run")
+@requires_admin
+def admin_video_run():
+    payload = request.get_json(silent=True)
+    if payload is None:
+        return json_response(400, {"message": "Invalid JSON body."})
+    inputs = dict(payload.get("inputs") or {})
+    if not inputs.get("image"):
+        return json_response(400, {"message": "An image is required."})
+    # Resolution is locked server-side for now regardless of what the client sends.
+    inputs["resolution"] = "720p"
+    if inputs.get("duration") not in (5, 10):
+        inputs["duration"] = 5
+    if not (inputs.get("prompt") or "").strip():
+        inputs.pop("prompt", None)
+    if not (inputs.get("end_image") or "").strip():
+        inputs.pop("end_image", None)
+    return proxy_to_fashn("/run", method="POST", payload={"model_name": "image-to-video", "inputs": inputs})
+
+
+@app.get("/api/admin/video/status/<prediction_id>")
+@requires_admin
+def admin_video_status(prediction_id):
+    prediction_id = (prediction_id or "").strip()
+    if not prediction_id:
+        return json_response(400, {"message": "Missing prediction id."})
+    return proxy_to_fashn(f"/status/{prediction_id}", method="GET")
+
+
 @app.get("/api/catalog")
 def get_catalog():
     resp = json_response(200, load_catalog())
