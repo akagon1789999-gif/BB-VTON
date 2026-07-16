@@ -235,9 +235,18 @@ def admin_video_status(prediction_id):
     return proxy_to_fashn(f"/status/{prediction_id}", method="GET")
 
 
+def payment_test_mode_enabled():
+    # Lets testers reach video generation without a real Paystack charge while the app isn't
+    # live yet. Must be explicitly turned on via env var — real payment is required by default.
+    return os.environ.get("PAYMENT_TEST_MODE", "").strip().lower() in ("1", "true", "yes", "on")
+
+
 @app.get("/api/config")
 def get_config():
-    resp = json_response(200, {"paystackPublicKey": os.environ.get("PAYSTACK_PUBLIC_KEY", "").strip()})
+    resp = json_response(200, {
+        "paystackPublicKey": os.environ.get("PAYSTACK_PUBLIC_KEY", "").strip(),
+        "paymentTestMode": payment_test_mode_enabled(),
+    })
     resp.headers["Cache-Control"] = "no-store"
     return resp
 
@@ -270,15 +279,18 @@ def client_video_run():
             return json_response(409, {"message": "This payment has already been used to generate a video."})
 
         if not record or not record.get("verified"):
-            body, err = paystack_verify(reference)
-            if err:
-                return json_response(502, {"message": err})
-            data = (body or {}).get("data") or {}
-            if not body.get("status") or data.get("status") != "success":
-                return json_response(402, {"message": "Payment was not successful."})
-            if data.get("currency") != "NGN":
-                return json_response(402, {"message": "Payment currency must be NGN."})
-            record = {"verified": True, "consumed": False, "amount": int(data.get("amount") or 0)}
+            if payment_test_mode_enabled():
+                record = {"verified": True, "consumed": False, "amount": required_kobo, "test": True}
+            else:
+                body, err = paystack_verify(reference)
+                if err:
+                    return json_response(502, {"message": err})
+                data = (body or {}).get("data") or {}
+                if not body.get("status") or data.get("status") != "success":
+                    return json_response(402, {"message": "Payment was not successful."})
+                if data.get("currency") != "NGN":
+                    return json_response(402, {"message": "Payment currency must be NGN."})
+                record = {"verified": True, "consumed": False, "amount": int(data.get("amount") or 0)}
 
         # Re-checked on every use (not just on first verification) so a reference paid for a
         # 5s clip can't be replayed to request the pricier 10s clip.

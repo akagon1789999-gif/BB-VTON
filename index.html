@@ -105,6 +105,9 @@
         <div style="color:#a39c8e;font-size:13px;line-height:1.5;margin-bottom:20px;text-align:center;">A short AI-animated clip of your try-on, generated in 720p. <strong style="color:#c9a769;">₦500</strong> for 5 seconds, <strong style="color:#c9a769;">₦1000</strong> for 10.</div>
 
         <sc-if value="{{ videoStageForm }}" hint-placeholder-val="{{ true }}">
+          <sc-if value="{{ paymentTestMode }}" hint-placeholder-val="{{ false }}">
+            <div style="background:rgba(201,167,105,0.1);border:1px solid rgba(201,167,105,0.3);border-radius:10px;padding:10px 12px;font-size:12px;color:#c9a769;text-align:center;margin-bottom:16px;">Testing mode — video generation is free right now, no payment will be charged.</div>
+          </sc-if>
           <div style="text-align:left;margin-bottom:14px;">
             <label style="display:block;font-size:12px;color:#8a8478;margin-bottom:6px;">Email (for your payment receipt)</label>
             <input type="text" value="{{ videoEmail }}" onChange="{{ setVideoEmail }}" placeholder="you@example.com" style="width:100%;box-sizing:border-box;background:#1b1a17;border:1px solid rgba(255,255,255,0.1);color:#f2ede4;border-radius:10px;padding:11px 13px;font-size:14px;outline:none;">
@@ -119,7 +122,7 @@
           <sc-if value="{{ hasVideoError }}" hint-placeholder-val="{{ false }}">
             <div style="color:#e08a8a;font-size:12.5px;margin-bottom:14px;">{{ videoErrorMsg }}</div>
           </sc-if>
-          <button style="width:100%;background:linear-gradient(180deg,#d8b878,#b5904f);color:#211a0e;border:none;border-radius:999px;padding:14px;font-weight:700;font-size:14.5px;cursor:pointer;margin-bottom:10px;" onClick="{{ startVideoPayment }}">Pay ₦{{ videoPriceNaira }} &amp; Generate</button>
+          <button style="width:100%;background:linear-gradient(180deg,#d8b878,#b5904f);color:#211a0e;border:none;border-radius:999px;padding:14px;font-weight:700;font-size:14.5px;cursor:pointer;margin-bottom:10px;" onClick="{{ startVideoPayment }}">{{ videoPayButtonLabel }}</button>
           <button style="width:100%;background:transparent;border:1px solid rgba(255,255,255,0.15);color:#8a8478;border-radius:999px;padding:12px;font-size:13px;cursor:pointer;" onClick="{{ closeVideoModal }}">Cancel</button>
         </sc-if>
 
@@ -817,6 +820,7 @@ class Component extends DCLogic {
     sharePopupSuitId: null,
     shareToast: null,
     paystackPublicKey: '',
+    paymentTestMode: false,
     videoModalOpen: false,
     videoStage: 'form',
     videoDuration: '5',
@@ -851,8 +855,11 @@ class Component extends DCLogic {
     fetch('/api/config')
       .then(res => (res.ok ? res.json() : null))
       .then(data => {
-        if (data && data.paystackPublicKey) {
-          this.setState({ paystackPublicKey: data.paystackPublicKey });
+        if (data) {
+          this.setState({
+            paystackPublicKey: data.paystackPublicKey || '',
+            paymentTestMode: !!data.paymentTestMode,
+          });
         }
       })
       .catch(() => {});
@@ -1118,6 +1125,11 @@ class Component extends DCLogic {
       this.setState({ videoErrorMsg: 'Please enter a valid email address.' });
       return;
     }
+    if (this.state.paymentTestMode) {
+      const reference = `test-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      this.generateVideo(reference);
+      return;
+    }
     if (!this.state.paystackPublicKey) {
       this.setState({ videoErrorMsg: 'Payments are not configured yet. Please try again later.' });
       return;
@@ -1352,6 +1364,8 @@ class Component extends DCLogic {
       video10Color: s.videoDuration === '10' ? '#211a0e' : '#f2ede4',
       video10Border: s.videoDuration === '10' ? '#c9a769' : 'rgba(255,255,255,0.12)',
       videoPriceNaira: (VIDEO_PRICE_KOBO[s.videoDuration] || VIDEO_PRICE_KOBO['5']) / 100,
+      paymentTestMode: s.paymentTestMode,
+      videoPayButtonLabel: s.paymentTestMode ? 'Generate Video (Test Mode)' : `Pay ₦${(VIDEO_PRICE_KOBO[s.videoDuration] || VIDEO_PRICE_KOBO['5']) / 100} & Generate`,
       setVideoDuration5: this.setVideoDuration5,
       setVideoDuration10: this.setVideoDuration10,
       startVideoPayment: this.startVideoPayment,
