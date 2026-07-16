@@ -40,6 +40,11 @@ DEFAULT_CATALOG = [
     {"id": "s12", "slotId": "suit-12", "name": "Camel Overcoat Ensemble", "brand": "Bryan Michaels", "price": "₦319", "fitType": "Slim Fit", "tags": ["Slim Fit", "Solid", "3PC"], "category": "Coats", "img": "assets/suit-12.jpg"},
     {"id": "s13", "slotId": "suit-13", "name": "Maroon Brocade Agbada Vest", "brand": "Tazzio", "price": "₦449", "fitType": "Slim Fit", "tags": ["Slim Fit", "Brocade", "2PC"], "category": "Traditional Wear", "img": "assets/suit-13.jpg"},
     {"id": "s14", "slotId": "suit-14", "name": "Heritage Plaid Three-Piece", "brand": "Stacy Adams", "price": "₦279", "fitType": "Hybrid Fit", "tags": ["Hybrid Fit", "Plaid", "3PC"], "category": "Suits", "img": "assets/suit-14.jpg"},
+    {"id": "s15", "slotId": "suit-15", "name": "Crimson Gold Brocade Coat Dress", "brand": "Tazzio", "price": "₦459", "fitType": "Hybrid Fit", "tags": ["Hybrid Fit", "Brocade", "1PC"], "category": "Coats", "img": "assets/suit-15.jpg"},
+    {"id": "s16", "slotId": "suit-16", "name": "Ivory Windowpane Puff-Sleeve Dress", "brand": "Sean Alexander", "price": "₦319", "fitType": "Slim Fit", "tags": ["Slim Fit", "Plaid", "1PC"], "category": "Dresses", "img": "assets/suit-16.jpg"},
+    {"id": "s17", "slotId": "suit-17", "name": "Emerald Bloom Bow Dress", "brand": "Bryan Michaels", "price": "₦339", "fitType": "Slim Fit", "tags": ["Slim Fit", "Floral", "1PC"], "category": "Dresses", "img": "assets/suit-17.jpg"},
+    {"id": "s18", "slotId": "suit-18", "name": "Sunset Colorblock Godet Skirt Dress", "brand": "Stacy Adams", "price": "₦369", "fitType": "Hybrid Fit", "tags": ["Hybrid Fit", "Colorblock", "1PC"], "category": "Dresses", "img": "assets/suit-18.jpg"},
+    {"id": "s19", "slotId": "suit-19", "name": "Noir Swirl Stripe Gown", "brand": "Tazzio", "price": "₦399", "fitType": "Classic Fit", "tags": ["Classic Fit", "Striped", "1PC"], "category": "Dresses", "img": "assets/suit-19.jpg"},
 ]
 
 
