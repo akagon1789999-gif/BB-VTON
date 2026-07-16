@@ -3,6 +3,7 @@ import json
 import os
 import re
 import secrets
+import threading
 import time
 import urllib.error
 import urllib.parse
@@ -16,6 +17,8 @@ from flask import Flask, Response, request, send_from_directory
 
 ROOT = Path(__file__).resolve().parent
 FASHN_API_BASE = "https://api.fashn.ai/v1"
+PAYSTACK_API_BASE = "https://api.paystack.co"
+VIDEO_PRICE_KOBO = {5: 50000, 10: 100000}  # ₦500 for 5s, ₦1000 for 10s
 
 # Point DATA_DIR at a mounted persistent volume in production (e.g. Railway
 # volume mounted at /data, with DATA_DIR=/data) so uploads and catalog.json
@@ -25,6 +28,8 @@ DATA_DIR.mkdir(parents=True, exist_ok=True)
 CATALOG_FILE = DATA_DIR / "catalog.json"
 UPLOADS_DIR = DATA_DIR / "uploads"
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+PAYMENTS_FILE = DATA_DIR / "payments.json"
+_payments_lock = threading.Lock()
 
 ALLOWED_IMAGE_TYPES = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}
 
@@ -91,6 +96,40 @@ def save_catalog(items):
 def slugify(text):
     slug = re.sub(r"[^a-zA-Z0-9]+", "-", (text or "").strip().lower()).strip("-")
     return slug or "item"
+
+
+def load_payments():
+    if not PAYMENTS_FILE.exists():
+        return {}
+    try:
+        return json.loads(PAYMENTS_FILE.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return {}
+
+
+def save_payments(data):
+    PAYMENTS_FILE.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+
+
+def paystack_verify(reference):
+    secret_key = os.environ.get("PAYSTACK_SECRET_KEY", "").strip()
+    if not secret_key:
+        return None, "Server is missing PAYSTACK_SECRET_KEY. Add it to .env and restart server."
+
+    url = f"{PAYSTACK_API_BASE}/transaction/verify/{urllib.parse.quote(reference, safe='')}"
+    req = urllib.request.Request(url, headers={"Authorization": f"Bearer {secret_key}"})
+    try:
+        with urllib.request.urlopen(req, timeout=30) as res:
+            return json.loads(res.read()), None
+    except urllib.error.HTTPError as exc:
+        try:
+            body = json.loads(exc.read())
+            message = body.get("message") or f"Paystack verification failed ({exc.code})."
+        except Exception:
+            message = f"Paystack verification failed ({exc.code})."
+        return None, message
+    except Exception as exc:
+        return None, f"Paystack verification error: {exc}"
 
 
 def requires_admin(f):
@@ -190,6 +229,82 @@ def admin_video_run():
 @app.get("/api/admin/video/status/<prediction_id>")
 @requires_admin
 def admin_video_status(prediction_id):
+    prediction_id = (prediction_id or "").strip()
+    if not prediction_id:
+        return json_response(400, {"message": "Missing prediction id."})
+    return proxy_to_fashn(f"/status/{prediction_id}", method="GET")
+
+
+@app.get("/api/config")
+def get_config():
+    resp = json_response(200, {"paystackPublicKey": os.environ.get("PAYSTACK_PUBLIC_KEY", "").strip()})
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+
+@app.post("/api/video/run")
+def client_video_run():
+    payload = request.get_json(silent=True)
+    if payload is None:
+        return json_response(400, {"message": "Invalid JSON body."})
+
+    reference = (payload.get("reference") or "").strip()
+    if not reference:
+        return json_response(400, {"message": "Missing payment reference."})
+
+    inputs = dict(payload.get("inputs") or {})
+    if not inputs.get("image"):
+        return json_response(400, {"message": "An image is required."})
+    inputs["resolution"] = "720p"
+    if inputs.get("duration") not in (5, 10):
+        inputs["duration"] = 5
+    inputs.pop("prompt", None)
+    inputs.pop("end_image", None)
+
+    required_kobo = VIDEO_PRICE_KOBO[inputs["duration"]]
+
+    with _payments_lock:
+        payments = load_payments()
+        record = payments.get(reference)
+        if record and record.get("consumed"):
+            return json_response(409, {"message": "This payment has already been used to generate a video."})
+
+        if not record or not record.get("verified"):
+            body, err = paystack_verify(reference)
+            if err:
+                return json_response(502, {"message": err})
+            data = (body or {}).get("data") or {}
+            if not body.get("status") or data.get("status") != "success":
+                return json_response(402, {"message": "Payment was not successful."})
+            if data.get("currency") != "NGN":
+                return json_response(402, {"message": "Payment currency must be NGN."})
+            record = {"verified": True, "consumed": False, "amount": int(data.get("amount") or 0)}
+
+        # Re-checked on every use (not just on first verification) so a reference paid for a
+        # 5s clip can't be replayed to request the pricier 10s clip.
+        if record.get("amount", 0) < required_kobo:
+            naira = required_kobo // 100
+            return json_response(402, {"message": f"Payment amount does not match the required ₦{naira} fee for a {inputs['duration']}s video."})
+
+        record["consumed"] = True
+        payments[reference] = record
+        save_payments(payments)
+
+    resp = proxy_to_fashn("/run", method="POST", payload={"model_name": "image-to-video", "inputs": inputs})
+
+    if resp.status_code >= 300:
+        # Starting the job failed — release the payment so the customer can retry without paying again.
+        with _payments_lock:
+            payments = load_payments()
+            if reference in payments:
+                payments[reference]["consumed"] = False
+                save_payments(payments)
+
+    return resp
+
+
+@app.get("/api/video/status/<prediction_id>")
+def client_video_status(prediction_id):
     prediction_id = (prediction_id or "").strip()
     if not prediction_id:
         return json_response(400, {"message": "Missing prediction id."})

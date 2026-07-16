@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script src="./support.js"></script>
+<script src="https://js.paystack.co/v1/inline.js"></script>
 </head>
 <body>
 <x-dc>
@@ -92,6 +93,55 @@
         <div style="color:#c9a769;font-size:13px;margin-bottom:22px;">{{ sharePopupSuitPrice }}</div>
         <button style="width:100%;background:linear-gradient(180deg,#d8b878,#b5904f);color:#211a0e;border:none;border-radius:999px;padding:14px;font-weight:700;font-size:14.5px;cursor:pointer;margin-bottom:10px;" onClick="{{ tryOnFromSharePopup }}">Try It On Yourself</button>
         <button style="width:100%;background:transparent;border:1px solid rgba(255,255,255,0.15);color:#8a8478;border-radius:999px;padding:12px;font-size:13px;cursor:pointer;" onClick="{{ closeSharePopup }}">Maybe Later</button>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- GENERATE VIDEO MODAL -->
+  <sc-if value="{{ hasVideoModal }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;background:rgba(0,0,0,0.65);display:flex;align-items:center;justify-content:center;z-index:320;padding:20px;box-sizing:border-box;" onClick="{{ closeVideoModal }}">
+      <div style="background:#141310;border:1px solid rgba(201,167,105,0.3);border-radius:20px;max-width:400px;width:100%;padding:28px 24px;box-shadow:0 20px 60px rgba(0,0,0,0.5);" onClick="{{ stopPropagation }}">
+        <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:600;margin-bottom:6px;text-align:center;">Turn Your Look Into a Video</div>
+        <div style="color:#a39c8e;font-size:13px;line-height:1.5;margin-bottom:20px;text-align:center;">A short AI-animated clip of your try-on, generated in 720p. <strong style="color:#c9a769;">₦500</strong> for 5 seconds, <strong style="color:#c9a769;">₦1000</strong> for 10.</div>
+
+        <sc-if value="{{ videoStageForm }}" hint-placeholder-val="{{ true }}">
+          <div style="text-align:left;margin-bottom:14px;">
+            <label style="display:block;font-size:12px;color:#8a8478;margin-bottom:6px;">Email (for your payment receipt)</label>
+            <input type="text" value="{{ videoEmail }}" onChange="{{ setVideoEmail }}" placeholder="you@example.com" style="width:100%;box-sizing:border-box;background:#1b1a17;border:1px solid rgba(255,255,255,0.1);color:#f2ede4;border-radius:10px;padding:11px 13px;font-size:14px;outline:none;">
+          </div>
+          <div style="text-align:left;margin-bottom:18px;">
+            <label style="display:block;font-size:12px;color:#8a8478;margin-bottom:8px;">Clip length</label>
+            <div style="display:flex;gap:10px;">
+              <button style="flex:1;padding:11px;border-radius:10px;font-size:13.5px;font-weight:600;cursor:pointer;background:{{ video5Bg }};color:{{ video5Color }};border:1px solid {{ video5Border }};" onClick="{{ setVideoDuration5 }}">5 seconds · ₦500</button>
+              <button style="flex:1;padding:11px;border-radius:10px;font-size:13.5px;font-weight:600;cursor:pointer;background:{{ video10Bg }};color:{{ video10Color }};border:1px solid {{ video10Border }};" onClick="{{ setVideoDuration10 }}">10 seconds · ₦1000</button>
+            </div>
+          </div>
+          <sc-if value="{{ hasVideoError }}" hint-placeholder-val="{{ false }}">
+            <div style="color:#e08a8a;font-size:12.5px;margin-bottom:14px;">{{ videoErrorMsg }}</div>
+          </sc-if>
+          <button style="width:100%;background:linear-gradient(180deg,#d8b878,#b5904f);color:#211a0e;border:none;border-radius:999px;padding:14px;font-weight:700;font-size:14.5px;cursor:pointer;margin-bottom:10px;" onClick="{{ startVideoPayment }}">Pay ₦{{ videoPriceNaira }} &amp; Generate</button>
+          <button style="width:100%;background:transparent;border:1px solid rgba(255,255,255,0.15);color:#8a8478;border-radius:999px;padding:12px;font-size:13px;cursor:pointer;" onClick="{{ closeVideoModal }}">Cancel</button>
+        </sc-if>
+
+        <sc-if value="{{ videoStageBusy }}" hint-placeholder-val="{{ false }}">
+          <div style="text-align:center;padding:24px 0;">
+            <div style="width:44px;height:44px;border-radius:50%;border:3px solid rgba(201,167,105,0.2);border-top-color:#c9a769;margin:0 auto 20px;animation:vt-spin 1s linear infinite;"></div>
+            <div style="font-weight:600;font-size:14.5px;margin-bottom:6px;">{{ videoBusyTitle }}</div>
+            <div style="color:#8a8478;font-size:12.5px;">{{ videoBusySubtitle }}</div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ videoStageError }}" hint-placeholder-val="{{ false }}">
+          <div style="color:#e08a8a;font-size:13px;margin-bottom:16px;text-align:center;">{{ videoErrorMsg }}</div>
+          <button style="width:100%;background:linear-gradient(180deg,#d8b878,#b5904f);color:#211a0e;border:none;border-radius:999px;padding:14px;font-weight:700;font-size:14.5px;cursor:pointer;margin-bottom:10px;" onClick="{{ retryVideoGeneration }}">Try Again</button>
+          <button style="width:100%;background:transparent;border:1px solid rgba(255,255,255,0.15);color:#8a8478;border-radius:999px;padding:12px;font-size:13px;cursor:pointer;" onClick="{{ closeVideoModal }}">Close</button>
+        </sc-if>
+
+        <sc-if value="{{ videoStageDone }}" hint-placeholder-val="{{ false }}">
+          <video src="{{ videoResultUrl }}" controls style="width:100%;border-radius:12px;background:#000;display:block;margin-bottom:16px;"></video>
+          <button style="width:100%;background:linear-gradient(180deg,#d8b878,#b5904f);color:#211a0e;border:none;border-radius:999px;padding:14px;font-weight:700;font-size:14.5px;cursor:pointer;margin-bottom:10px;" onClick="{{ downloadVideo }}">Download Video</button>
+          <button style="width:100%;background:transparent;border:1px solid rgba(255,255,255,0.15);color:#8a8478;border-radius:999px;padding:12px;font-size:13px;cursor:pointer;" onClick="{{ closeVideoModal }}">Close</button>
+        </sc-if>
       </div>
     </div>
   </sc-if>
@@ -618,6 +668,7 @@
               <button style="background:transparent;border:1px solid rgba(255,255,255,0.15);color:#f2ede4;border-radius:999px;padding:12px 22px;font-size:14px;cursor:pointer;" onClick="{{ downloadImage }}">Download Image</button>
               <button style="background:#1f1d18;border:1px solid rgba(255,255,255,0.1);color:#f2ede4;border-radius:999px;padding:12px 22px;font-weight:600;font-size:14px;cursor:pointer;" onClick="{{ addToCart }}">{{ cartLabel }}</button>
               <button style="background:linear-gradient(180deg,#d8b878,#b5904f);color:#211a0e;border:none;border-radius:999px;padding:12px 26px;font-weight:700;font-size:14px;cursor:pointer;" onClick="{{ saveTryOn }}">{{ saveLabel }}</button>
+              <button style="background:transparent;border:1px solid rgba(201,167,105,0.4);color:#c9a769;border-radius:999px;padding:12px 22px;font-weight:600;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;" onClick="{{ openVideoModal }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c9a769" stroke-width="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>Generate Video · from ₦500</button>
             </div>
             <div style="display:flex;justify-content:center;align-items:center;gap:10px;margin-top:18px;">
               <span style="color:#8a8478;font-size:12.5px;">Share this look:</span>
@@ -690,6 +741,7 @@ const FIT_TYPES = ['Slim Fit','Classic Fit','Hybrid Fit'];
 // FASHN virtual try-on (https://fashn.ai) now runs through a small same-origin
 // proxy so the browser never sees the secret API key.
 const FASHN_API_BASE = '/api/fashn';
+const VIDEO_PRICE_KOBO = { '5': 50000, '10': 100000 };
 
 async function urlToDataUrl(url) {
   if (location.protocol === 'file:') {
@@ -764,6 +816,14 @@ class Component extends DCLogic {
     isIosInstall: false,
     sharePopupSuitId: null,
     shareToast: null,
+    paystackPublicKey: '',
+    videoModalOpen: false,
+    videoStage: 'form',
+    videoDuration: '5',
+    videoEmail: '',
+    videoErrorMsg: null,
+    videoResultUrl: null,
+    videoReference: null,
   };
 
   componentDidMount() {
@@ -784,6 +844,15 @@ class Component extends DCLogic {
         if (Array.isArray(data) && data.length) {
           RAW_SUITS = data;
           this.forceUpdate();
+        }
+      })
+      .catch(() => {});
+
+    fetch('/api/config')
+      .then(res => (res.ok ? res.json() : null))
+      .then(data => {
+        if (data && data.paystackPublicKey) {
+          this.setState({ paystackPublicKey: data.paystackPublicKey });
         }
       })
       .catch(() => {});
@@ -1027,6 +1096,122 @@ class Component extends DCLogic {
     }
   };
 
+  setVideoEmail = (e) => this.setState({ videoEmail: e.target.value, videoErrorMsg: null });
+  setVideoDuration5 = () => this.setState({ videoDuration: '5' });
+  setVideoDuration10 = () => this.setState({ videoDuration: '10' });
+
+  openVideoModal = () => {
+    if (!this.state.resultImageUrl) return;
+    this.setState({
+      videoModalOpen: true, videoStage: 'form', videoErrorMsg: null, videoResultUrl: null, videoReference: null,
+    });
+  };
+
+  closeVideoModal = () => {
+    if (this.state.videoStage === 'paying' || this.state.videoStage === 'generating') return;
+    this.setState({ videoModalOpen: false });
+  };
+
+  startVideoPayment = () => {
+    const email = (this.state.videoEmail || '').trim();
+    if (!/^\S+@\S+\.\S+$/.test(email)) {
+      this.setState({ videoErrorMsg: 'Please enter a valid email address.' });
+      return;
+    }
+    if (!this.state.paystackPublicKey) {
+      this.setState({ videoErrorMsg: 'Payments are not configured yet. Please try again later.' });
+      return;
+    }
+    if (typeof PaystackPop === 'undefined') {
+      this.setState({ videoErrorMsg: 'Could not load the payment provider. Check your connection and try again.' });
+      return;
+    }
+    const reference = `bbvto-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    this.setState({ videoStage: 'paying', videoErrorMsg: null, videoReference: reference });
+    const handler = PaystackPop.setup({
+      key: this.state.paystackPublicKey,
+      email,
+      amount: VIDEO_PRICE_KOBO[this.state.videoDuration] || VIDEO_PRICE_KOBO['5'],
+      currency: 'NGN',
+      ref: reference,
+      metadata: { purpose: 'vto_video_generation' },
+      callback: (response) => {
+        this.generateVideo(response.reference || reference);
+      },
+      onClose: () => {
+        if (this.state.videoStage === 'paying') {
+          this.setState({ videoStage: 'form' });
+        }
+      },
+    });
+    handler.openIframe();
+  };
+
+  generateVideo = async (reference) => {
+    this.setState({ videoStage: 'generating', videoReference: reference, videoErrorMsg: null });
+    try {
+      const imageDataUrl = await urlToDataUrl(this.state.resultImageUrl);
+      const duration = parseInt(this.state.videoDuration, 10);
+      const runRes = await fetch('/api/video/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reference, inputs: { image: imageDataUrl, duration, resolution: '720p' } }),
+      });
+      const runJson = await runRes.json().catch(() => ({}));
+      if (!runRes.ok) throw new Error(runJson.message || runJson.error || `Could not start video generation (${runRes.status}).`);
+
+      const startedAt = Date.now();
+      const timeoutMs = 300000;
+      const pollMs = 3000;
+      let result = null;
+      while (Date.now() - startedAt < timeoutMs) {
+        await new Promise(r => setTimeout(r, pollMs));
+        const statusRes = await fetch(`/api/video/status/${runJson.id}`);
+        const statusJson = await statusRes.json().catch(() => ({}));
+        if (!statusRes.ok) throw new Error(statusJson.message || `Status check failed (${statusRes.status}).`);
+        if (statusJson.status === 'completed') { result = statusJson; break; }
+        if (['failed', 'canceled', 'time_out'].includes(statusJson.status)) {
+          throw new Error((statusJson.error && statusJson.error.message) || `Video generation ${statusJson.status}.`);
+        }
+      }
+      if (!result) throw new Error('Video generation timed out. Please try again — your payment will not be charged again.');
+
+      this.setState({ videoStage: 'done', videoResultUrl: result.output[0] });
+    } catch (err) {
+      console.error('Video generation failed:', err);
+      this.setState({ videoStage: 'error', videoErrorMsg: err.message });
+    }
+  };
+
+  retryVideoGeneration = () => {
+    if (this.state.videoReference) {
+      this.generateVideo(this.state.videoReference);
+    } else {
+      this.setState({ videoStage: 'form' });
+    }
+  };
+
+  downloadVideo = async () => {
+    const url = this.state.videoResultUrl;
+    if (!url) return;
+    const suit = RAW_SUITS.find(s => s.id === this.state.selectedSuitId);
+    const fileName = suit ? `${suit.name.replace(/\s+/g, '-').toLowerCase()}-video.mp4` : 'virtual-try-on-video.mp4';
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      window.open(url, '_blank');
+    }
+  };
+
   saveTryOn = () => {
     const suit = RAW_SUITS.find(s => s.id === this.state.selectedSuitId);
     if (!suit || !this.state.resultImageUrl) return;
@@ -1147,6 +1332,32 @@ class Component extends DCLogic {
       stopPropagation: this.stopPropagation,
       hasShareToast: !!s.shareToast,
       shareToast: s.shareToast,
+      hasVideoModal: s.videoModalOpen,
+      openVideoModal: this.openVideoModal,
+      closeVideoModal: this.closeVideoModal,
+      videoStageForm: s.videoStage === 'form',
+      videoStageBusy: s.videoStage === 'paying' || s.videoStage === 'generating',
+      videoStageError: s.videoStage === 'error',
+      videoStageDone: s.videoStage === 'done',
+      videoBusyTitle: s.videoStage === 'paying' ? 'Waiting for payment…' : 'Animating your look…',
+      videoBusySubtitle: s.videoStage === 'paying' ? 'Complete the ₦500 payment in the popup window.' : "This can take a few minutes — please don't close this window.",
+      hasVideoError: !!s.videoErrorMsg,
+      videoErrorMsg: s.videoErrorMsg,
+      videoEmail: s.videoEmail,
+      setVideoEmail: this.setVideoEmail,
+      video5Bg: s.videoDuration === '5' ? '#c9a769' : '#1b1a17',
+      video5Color: s.videoDuration === '5' ? '#211a0e' : '#f2ede4',
+      video5Border: s.videoDuration === '5' ? '#c9a769' : 'rgba(255,255,255,0.12)',
+      video10Bg: s.videoDuration === '10' ? '#c9a769' : '#1b1a17',
+      video10Color: s.videoDuration === '10' ? '#211a0e' : '#f2ede4',
+      video10Border: s.videoDuration === '10' ? '#c9a769' : 'rgba(255,255,255,0.12)',
+      videoPriceNaira: (VIDEO_PRICE_KOBO[s.videoDuration] || VIDEO_PRICE_KOBO['5']) / 100,
+      setVideoDuration5: this.setVideoDuration5,
+      setVideoDuration10: this.setVideoDuration10,
+      startVideoPayment: this.startVideoPayment,
+      retryVideoGeneration: this.retryVideoGeneration,
+      downloadVideo: this.downloadVideo,
+      videoResultUrl: s.videoResultUrl,
       isHome: s.view === 'home',
       isCatalog: s.view === 'catalog',
       isSize: s.view === 'sizefinder',

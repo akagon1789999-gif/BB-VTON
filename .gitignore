@@ -8,3 +8,6 @@ __pycache__/
 # Runtime catalog data (admin uploads) — persisted on disk, not in git
 /catalog.json
 /uploads/
+
+# Runtime payment records for the paid video feature — persisted on disk, not in git
+/payments.json
