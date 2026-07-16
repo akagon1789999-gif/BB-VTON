@@ -5,8 +5,10 @@ import re
 import secrets
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from functools import wraps
+from html import escape
 from pathlib import Path
 
 from flask import Flask, Response, request, send_from_directory
@@ -276,6 +278,50 @@ def delete_catalog_item(item_id):
     return json_response(200, {"message": "Deleted."})
 
 
+def _abs_url(base_url, path):
+    if not path:
+        path = "assets/bb-logo.png"
+    if path.startswith("http://") or path.startswith("https://"):
+        return path
+    return base_url.rstrip("/") + "/" + path.lstrip("/")
+
+
+def render_index_html(shared_id=None):
+    html = (ROOT / "index.html").read_text(encoding="utf-8")
+    base_url = request.host_url
+
+    title = "BB Apparel — Virtual Try-On"
+    description = "Upload your photo and virtually try on suits, blazers, and dresses before you buy — powered by AI."
+    image = _abs_url(base_url, "assets/bb-logo.png")
+    page_url = base_url
+
+    item = None
+    if shared_id:
+        item = next((x for x in load_catalog() if x["id"] == shared_id), None)
+
+    if item:
+        title = f"{item['name']} — BB Apparel"
+        subtitle = " · ".join([p for p in [item.get("brand"), item.get("category")] if p])
+        price = item.get("price", "")
+        description = " ".join(filter(None, [subtitle, price, "— See it on you with our free AI virtual try-on."]))
+        image = _abs_url(base_url, item.get("img", ""))
+        page_url = base_url.rstrip("/") + "/?shared=" + urllib.parse.quote(item["id"])
+
+    meta_tags = (
+        '\n  <meta property="og:type" content="website">\n'
+        '  <meta property="og:site_name" content="BB Apparel">\n'
+        f'  <meta property="og:title" content="{escape(title)}">\n'
+        f'  <meta property="og:description" content="{escape(description)}">\n'
+        f'  <meta property="og:image" content="{escape(image)}">\n'
+        f'  <meta property="og:url" content="{escape(page_url)}">\n'
+        '  <meta name="twitter:card" content="summary_large_image">\n'
+        f'  <meta name="twitter:title" content="{escape(title)}">\n'
+        f'  <meta name="twitter:description" content="{escape(description)}">\n'
+        f'  <meta name="twitter:image" content="{escape(image)}">\n'
+    )
+    return html.replace("</head>", meta_tags + "</head>", 1)
+
+
 @app.get("/uploads/<path:filename>")
 def uploaded_file(filename):
     response = send_from_directory(UPLOADS_DIR, filename)
@@ -286,6 +332,12 @@ def uploaded_file(filename):
 @app.route("/", defaults={"path": "index.html"})
 @app.route("/<path:path>")
 def static_files(path):
+    if path == "index.html":
+        shared_id = (request.args.get("shared") or "").strip()
+        html = render_index_html(shared_id or None)
+        response = Response(html, mimetype="text/html")
+        response.headers["Cache-Control"] = "no-store"
+        return response
     response = send_from_directory(ROOT, path)
     response.headers["Cache-Control"] = "no-store"
     return response
