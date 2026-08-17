@@ -14,6 +14,8 @@ from pathlib import Path
 
 from flask import Flask, Response, request, send_from_directory
 
+import fabric_studio
+
 
 ROOT = Path(__file__).resolve().parent
 FASHN_API_BASE = "https://api.fashn.ai/v1"
@@ -188,6 +190,14 @@ def proxy_to_fashn(endpoint, method="GET", payload=None):
         return resp
     except Exception as exc:
         return json_response(502, {"message": f"FASHN proxy request failed: {exc}"})
+
+
+# ---------------------------------------------------------------- Fabric Studio
+# Person + fabric + predefined outfit -> virtual try-on. Lives in its own
+# package and reuses this module's admin guard; the existing garment try-on
+# routes below are untouched.
+fabric_studio.register(app, admin_required=requires_admin)
+fabric_studio.run_startup_tasks()
 
 
 @app.post("/api/fashn/run")
@@ -509,4 +519,5 @@ if __name__ == "__main__":
     port = int(os.environ.get("PORT", "8000"))
     print(f"Serving BB Virtual Try-On at http://{host}:{port}")
     print("FASHN proxy enabled at /api/fashn/*")
+    print("Fabric Studio enabled at /api/fabrics, /api/outfits, /api/fabric-studio/*")
     app.run(host=host, port=port, threaded=True)

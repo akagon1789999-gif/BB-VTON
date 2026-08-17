@@ -1,2 +1,5 @@
 flask==3.0.3
 gunicorn==22.0.0
+# Fabric Studio: swatch rendering, garment composition, colour/pattern analysis.
+pillow==11.3.0
+numpy==2.0.2

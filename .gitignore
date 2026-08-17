@@ -11,3 +11,11 @@ __pycache__/
 
 # Runtime payment records for the paid video feature — persisted on disk, not in git
 /payments.json
+
+# Fabric Studio runtime data (catalogues, generated media, migration state).
+# These live on the mounted DATA_DIR volume in production, not in git.
+/fabric_catalog.json
+/outfit_catalog.json
+/fabric_generations.json
+/fabric_studio_meta.json
+/media/
