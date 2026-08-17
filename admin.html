@@ -5,50 +5,95 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>BB Apparel — Catalog Admin</title>
 <link rel="icon" href="./icons/icon-192.png" type="image/png">
+<script>
+  (function () {
+    var stored = null;
+    try { stored = window.localStorage.getItem('bbTheme'); } catch (err) { stored = null; }
+    var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    document.documentElement.setAttribute('data-theme',
+      (stored === 'dark' || stored === 'cream') ? stored : (prefersDark ? 'dark' : 'cream'));
+  })();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
+  /* Theme tokens — shared vocabulary with the storefront (index.html). */
+  :root {
+    color-scheme: light;
+    --bg:#F6F2EA; --surface:#FFFFFF; --surface-2:#F1ECE2; --surface-3:#EBE5D9; --well:#F3EFE6;
+    --text:#1C1710; --text-2:#514A3C; --text-3:#6E6757; --text-4:#948D7C; --nav-text:#3E382C;
+    --accent:#8A6410; --accent-rgb:138,100,16; --accent-soft:#F6EEDA;
+    --cta-from:#2A241C; --cta-to:#17130A; --on-accent:#FFFFFF;
+    --border-rgb:23,19,52;
+    --danger:#B3261E; --danger-text:#8C1D18;
+    --ok:#1B7F4B; --ok-bg:rgba(27,127,75,0.12);
+    --shadow-card:0 8px 28px rgba(28,23,16,0.08);
+    --photo-bg:#F7F6F3;
+  }
+  [data-theme="dark"] {
+    color-scheme: dark;
+    --bg:#0F0D0B; --surface:#1A1713; --surface-2:#221E19; --surface-3:#27221C; --well:#131009;
+    --text:#F4F1EA; --text-2:#C6BFB1; --text-3:#968F81; --text-4:#746E62; --nav-text:#D9D3C6;
+    --accent:#D8B25A; --accent-rgb:216,178,90; --accent-soft:#2A2314;
+    --cta-from:#D8B25A; --cta-to:#A87F28; --on-accent:#1A1408;
+    --border-rgb:255,255,255;
+    --danger:#F0A6A0; --danger-text:#E0B3AB;
+    --ok:#7EC79A; --ok-bg:rgba(126,199,154,0.14);
+    --shadow-card:0 8px 28px rgba(0,0,0,0.35);
+    --photo-bg:#F7F6F3;
+  }
   *{box-sizing:border-box;}
-  body{margin:0;background:#0b0b0a;color:#f2ede4;font-family:Inter,sans-serif;min-height:100vh;}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,sans-serif;min-height:100vh;}
+  .card,.item-card,.modal,.login-card{box-shadow:var(--shadow-card);}
   h1,h2{font-family:'Playfair Display',serif;font-weight:600;margin:0;}
   input,select,button,textarea{font-family:inherit;}
   .wrap{max-width:1100px;margin:0 auto;padding:40px 24px 80px;}
   .login-wrap{max-width:360px;margin:14vh auto 0;padding:0 24px;text-align:center;}
-  .login-card{background:#141310;border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:32px 28px;}
+  .login-card{background:var(--surface);border:1px solid rgba(var(--border-rgb),0.08);border-radius:16px;padding:32px 28px;}
   .field{margin-bottom:16px;text-align:left;}
-  label{display:block;font-size:12.5px;color:#a39c8e;margin-bottom:6px;}
+  label{display:block;font-size:12.5px;color:var(--text-2);margin-bottom:6px;}
   input[type=text], input[type=password], input[type=number], select, textarea{
-    width:100%;background:#1b1a17;border:1px solid rgba(255,255,255,0.1);color:#f2ede4;
+    width:100%;background:var(--surface-2);border:1px solid rgba(var(--border-rgb),0.1);color:var(--text);
     border-radius:10px;padding:11px 13px;font-size:14px;outline:none;
   }
-  input:focus, select:focus, textarea:focus{border-color:#c9a769;}
-  .btn-primary{background:linear-gradient(180deg,#d8b878,#b5904f);color:#211a0e;border:none;border-radius:999px;padding:12px 22px;font-weight:700;font-size:14px;cursor:pointer;}
-  .btn-secondary{background:#1f1d18;border:1px solid rgba(255,255,255,0.1);color:#f2ede4;border-radius:999px;padding:11px 20px;font-weight:600;font-size:13.5px;cursor:pointer;}
-  .btn-danger{background:transparent;border:1px solid rgba(220,90,90,0.4);color:#e08a8a;border-radius:999px;padding:9px 16px;font-size:12.5px;cursor:pointer;}
-  .error{color:#e08a8a;font-size:13px;margin-top:10px;min-height:16px;}
+  input:focus, select:focus, textarea:focus{border-color:var(--accent);}
+  .btn-primary{background:linear-gradient(180deg,var(--cta-from),var(--cta-to));color:var(--on-accent);border:none;border-radius:999px;padding:12px 22px;font-weight:700;font-size:14px;cursor:pointer;}
+  .btn-secondary{background:var(--surface-3);border:1px solid rgba(var(--border-rgb),0.1);color:var(--text);border-radius:999px;padding:11px 20px;font-weight:600;font-size:13.5px;cursor:pointer;}
+  .btn-danger{background:transparent;border:1px solid var(--danger);color:var(--danger);border-radius:999px;padding:9px 16px;font-size:12.5px;cursor:pointer;}
+  .error{color:var(--danger-text);font-size:13px;margin-top:10px;min-height:16px;}
   header.top{display:flex;align-items:center;justify-content:space-between;margin-bottom:32px;flex-wrap:wrap;gap:12px;}
-  .card{background:#141310;border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:24px;}
+  .card{background:var(--surface);border:1px solid rgba(var(--border-rgb),0.07);border-radius:16px;padding:24px;}
   .form-grid{display:grid;grid-template-columns:220px 1fr;gap:24px;}
-  .dropzone{border:1px dashed rgba(255,255,255,0.2);border-radius:12px;height:220px;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#101009;cursor:pointer;position:relative;}
+  .dropzone{border:1px dashed rgba(var(--border-rgb),0.2);border-radius:12px;height:220px;display:flex;align-items:center;justify-content:center;overflow:hidden;background:var(--well);cursor:pointer;position:relative;}
   .dropzone img{width:100%;height:100%;object-fit:contain;}
-  .dropzone .hint{color:#8a8478;font-size:12.5px;text-align:center;padding:0 16px;}
+  .dropzone .hint{color:var(--text-3);font-size:12.5px;text-align:center;padding:0 16px;}
   .fields-2col{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:18px;margin-top:28px;}
-  .item-card{background:#141310;border:1px solid rgba(255,255,255,0.07);border-radius:14px;overflow:hidden;}
-  .item-card .thumb{height:200px;background:#1b1a17;position:relative;}
+  .item-card{background:var(--surface);border:1px solid rgba(var(--border-rgb),0.07);border-radius:14px;overflow:hidden;}
+  .item-card .thumb{height:200px;background:var(--surface-2);position:relative;}
   .item-card .thumb img{width:100%;height:100%;object-fit:contain;object-position:center top;display:block;}
   .item-card .body{padding:14px;}
   .item-card .name{font-weight:600;font-size:14.5px;margin-bottom:2px;}
-  .item-card .meta{color:#8a8478;font-size:12px;margin-bottom:10px;}
-  .item-card .price{color:#c9a769;font-weight:700;font-size:14.5px;margin-bottom:12px;}
+  .item-card .meta{color:var(--text-3);font-size:12px;margin-bottom:10px;}
+  .item-card .price{color:var(--accent);font-weight:700;font-size:14.5px;margin-bottom:12px;}
   .item-card .actions{display:flex;flex-wrap:wrap;gap:8px;}
   .item-card .actions .btn-secondary, .item-card .actions .btn-danger{padding:8px 13px;font-size:12px;}
-  .empty{text-align:center;padding:60px 20px;color:#8a8478;border:1px dashed rgba(255,255,255,0.1);border-radius:16px;margin-top:28px;}
+  .empty{text-align:center;padding:60px 20px;color:var(--text-3);border:1px dashed rgba(var(--border-rgb),0.1);border-radius:16px;margin-top:28px;}
   .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px;}
-  .modal{background:#141310;border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:28px;max-width:520px;width:100%;max-height:90vh;overflow:auto;}
+  .modal{background:var(--surface);border:1px solid rgba(var(--border-rgb),0.1);border-radius:16px;padding:28px;max-width:520px;width:100%;max-height:90vh;overflow:auto;}
   .hidden{display:none !important;}
-  a.back-link{color:#a39c8e;font-size:13px;text-decoration:none;}
-  @media (max-width:700px){ .form-grid{grid-template-columns:1fr;} .fields-2col{grid-template-columns:1fr;} }
+  a.back-link{color:var(--text-2);font-size:13px;text-decoration:none;}
+  .tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:26px;}
+  .tab{padding:9px 18px;border-radius:999px;font-size:13.5px;font-weight:600;cursor:pointer;background:var(--surface-2);color:var(--text-2);border:1px solid rgba(var(--border-rgb),0.07);}
+  .tab.active{background:var(--accent);color:var(--on-accent);border-color:var(--accent);}
+  .badge{display:inline-block;font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:999px;letter-spacing:0.4px;}
+  .badge-live{background:var(--ok-bg);color:var(--ok);}
+  .badge-off{background:rgba(var(--border-rgb),0.08);color:var(--text-3);}
+  .badge-pending{background:rgba(var(--accent-rgb),0.18);color:var(--accent);}
+  .statline{display:flex;flex-wrap:wrap;gap:18px;color:var(--text-3);font-size:12.5px;margin-bottom:22px;}
+  .statline b{color:var(--text);font-weight:600;}
+  .fields-3col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+  @media (max-width:700px){ .form-grid{grid-template-columns:1fr;} .fields-2col{grid-template-columns:1fr;} .fields-3col{grid-template-columns:1fr;} }
 </style>
 </head>
 <body>
@@ -56,7 +101,7 @@
 <div id="login-view" class="login-wrap">
   <div class="login-card">
     <h1 style="font-size:22px;margin-bottom:6px;">BB Admin</h1>
-    <div style="color:#8a8478;font-size:13px;margin-bottom:22px;">Enter the admin password to manage the catalog.</div>
+    <div style="color:var(--text-3);font-size:13px;margin-bottom:22px;">Enter the admin password to manage the catalog.</div>
     <div class="field">
       <input type="password" id="password-input" placeholder="Admin password" autocomplete="current-password">
     </div>
@@ -71,9 +116,20 @@
       <a class="back-link" href="./index.html">← Back to site</a>
       <h1 style="font-size:28px;margin-top:6px;">Catalog Admin</h1>
     </div>
-    <button class="btn-secondary" id="logout-btn">Log out</button>
+    <div style="display:flex;gap:10px;align-items:center;">
+      <button class="btn-secondary" id="theme-btn" title="Switch between cream and dark mode">Dark mode</button>
+      <button class="btn-secondary" id="logout-btn">Log out</button>
+    </div>
   </header>
 
+  <div class="tabs">
+    <div class="tab active" data-tab="products">Products</div>
+    <div class="tab" data-tab="fabrics">Fabrics</div>
+    <div class="tab" data-tab="outfits">Outfits</div>
+    <div class="tab" data-tab="imports">Fabric Imports</div>
+  </div>
+
+  <div id="tab-products">
   <div class="card">
     <h2 style="font-size:18px;margin-bottom:20px;">Add New Item</h2>
     <form id="create-form">
@@ -123,6 +179,145 @@
 
   <div id="items-grid" class="grid"></div>
   <div id="empty-state" class="empty hidden">No items in the catalog yet.</div>
+  </div>
+
+  <!-- ------------------------------------------------------------- FABRICS -->
+  <div id="tab-fabrics" class="hidden">
+    <div class="statline" id="studio-status">Loading Fabric Studio status…</div>
+    <div class="card">
+      <h2 style="font-size:18px;margin-bottom:20px;">Add Fabric</h2>
+      <form id="fabric-form">
+        <div class="form-grid">
+          <div>
+            <div class="dropzone" id="fabric-dropzone">
+              <img id="fabric-preview-img" class="hidden">
+              <div class="hint" id="fabric-dropzone-hint">Click to upload a fabric photo<br>JPG, PNG, or WEBP · at least 240px</div>
+            </div>
+            <input type="file" id="fabric-image-input" accept="image/jpeg,image/png,image/webp" class="hidden">
+          </div>
+          <div>
+            <div class="fields-2col">
+              <div class="field"><label>Name</label><input type="text" id="fabric-name" placeholder="e.g. Royal Blue Ankara" required></div>
+              <div class="field"><label>Category</label><input type="text" id="fabric-category" list="fabric-category-options" placeholder="e.g. Ankara"><datalist id="fabric-category-options"></datalist></div>
+              <div class="field"><label>Sub-category</label><input type="text" id="fabric-subcategory" placeholder="e.g. Wax Print"></div>
+              <div class="field"><label>Pattern type</label><input type="text" id="fabric-pattern" list="fabric-pattern-options" placeholder="leave blank to auto-detect"><datalist id="fabric-pattern-options"></datalist></div>
+              <div class="field"><label>Primary colours (comma separated)</label><input type="text" id="fabric-colors" placeholder="leave blank to auto-detect"></div>
+              <div class="field"><label>Tags (comma separated)</label><input type="text" id="fabric-tags" placeholder="e.g. Traditional, Occasion"></div>
+              <div class="field"><label>Source name</label><input type="text" id="fabric-source-name" placeholder="e.g. BB Apparel"></div>
+              <div class="field"><label>Source URL</label><input type="text" id="fabric-source-url" placeholder="https://…"></div>
+            </div>
+            <div class="field"><label>Licence / usage rights</label><input type="text" id="fabric-license" placeholder="e.g. Owned photography — unrestricted use"></div>
+            <div class="field"><label>Description</label><textarea id="fabric-description" rows="2" placeholder="What is this fabric and when is it worn?"></textarea></div>
+            <button type="submit" class="btn-primary" id="fabric-submit-btn">Add Fabric</button>
+            <div class="error" id="fabric-error"></div>
+          </div>
+        </div>
+      </form>
+    </div>
+    <div id="fabrics-grid" class="grid"></div>
+    <div id="fabrics-empty" class="empty hidden">No fabrics yet.</div>
+  </div>
+
+  <!-- ------------------------------------------------------------- OUTFITS -->
+  <div id="tab-outfits" class="hidden">
+    <div class="card">
+      <h2 style="font-size:18px;margin-bottom:20px;">Add Outfit</h2>
+      <form id="outfit-form">
+        <div class="fields-3col">
+          <div class="field"><label>Name</label><input type="text" id="outfit-name" placeholder="e.g. Modern Senator" required></div>
+          <div class="field"><label>Garment template</label><select id="outfit-template"></select></div>
+          <div class="field"><label>Category</label><select id="outfit-category"><option>Men</option><option>Women</option><option>Unisex</option></select></div>
+          <div class="field"><label>Garment type</label><select id="outfit-garment-type"><option value="one-pieces">one-pieces (full body)</option><option value="tops">tops (upper body)</option><option value="bottoms">bottoms (lower body)</option></select></div>
+          <div class="field"><label>Pattern scale (0.1–1.6)</label><input type="text" id="outfit-scale" placeholder="blank = template default"></div>
+          <div class="field"><label>Sort order</label><input type="text" id="outfit-sort" placeholder="e.g. 120"></div>
+        </div>
+        <div class="field"><label>Description</label><input type="text" id="outfit-description" placeholder="Short description shown on the outfit card"></div>
+        <div class="field"><label>Design prompt (used by AI Design mode)</label><input type="text" id="outfit-prompt" placeholder="e.g. tailored senator set with a mandarin collar"></div>
+        <div class="field"><label>Preview image (optional — rendered from the template if left blank)</label><input type="file" id="outfit-preview-input" accept="image/jpeg,image/png,image/webp"></div>
+        <button type="submit" class="btn-primary" id="outfit-submit-btn">Add Outfit</button>
+        <div class="error" id="outfit-error"></div>
+      </form>
+    </div>
+    <div id="outfits-grid" class="grid"></div>
+  </div>
+
+  <!-- ------------------------------------------------------------- IMPORTS -->
+  <div id="tab-imports" class="hidden">
+    <div class="card" style="margin-bottom:24px;">
+      <h2 style="font-size:18px;margin-bottom:8px;">Import a fabric from the web</h2>
+      <div style="color:var(--text-3);font-size:12.5px;line-height:1.6;margin-bottom:18px;">
+        Imports are fetched server-side from approved hosts only, respect robots.txt, and always land as
+        <b style="color:var(--accent);">pending review</b> — nothing reaches customers until you publish it, and publishing
+        requires a licence and a source URL.
+      </div>
+      <div class="statline" id="import-status"></div>
+      <form id="import-form">
+        <div class="field"><label>Image URL (https)</label><input type="text" id="import-url" placeholder="https://example.com/fabric.jpg" required></div>
+        <div class="fields-3col">
+          <div class="field"><label>Name</label><input type="text" id="import-name" placeholder="leave blank to use the filename"></div>
+          <div class="field"><label>Category</label><input type="text" id="import-category" placeholder="e.g. Ankara"></div>
+          <div class="field"><label>Source name</label><input type="text" id="import-source-name" placeholder="e.g. Wikimedia Commons"></div>
+        </div>
+        <div class="field"><label>Licence / usage rights</label><input type="text" id="import-license" placeholder="e.g. CC BY-SA 4.0"></div>
+        <div class="field"><label>Attribution</label><input type="text" id="import-attribution" placeholder="e.g. Photo by … , CC BY-SA 4.0"></div>
+        <button type="submit" class="btn-primary" id="import-submit-btn">Fetch for review</button>
+        <div class="error" id="import-error"></div>
+      </form>
+    </div>
+    <h2 style="font-size:16px;margin-bottom:6px;">Pending review</h2>
+    <div id="imports-grid" class="grid"></div>
+    <div id="imports-empty" class="empty hidden">Nothing waiting for review.</div>
+  </div>
+</div>
+
+<div id="fabric-edit-overlay" class="modal-overlay hidden">
+  <div class="modal">
+    <h2 style="font-size:18px;margin-bottom:20px;">Edit Fabric</h2>
+    <form id="fabric-edit-form">
+      <div class="dropzone" id="fabric-edit-dropzone" style="height:170px;margin-bottom:16px;"><img id="fabric-edit-preview"></div>
+      <input type="file" id="fabric-edit-image" accept="image/jpeg,image/png,image/webp" class="hidden">
+      <div class="fields-2col">
+        <div class="field"><label>Name</label><input type="text" id="fabric-edit-name" required></div>
+        <div class="field"><label>Category</label><input type="text" id="fabric-edit-category"></div>
+        <div class="field"><label>Sub-category</label><input type="text" id="fabric-edit-subcategory"></div>
+        <div class="field"><label>Pattern type</label><input type="text" id="fabric-edit-pattern"></div>
+        <div class="field"><label>Primary colours</label><input type="text" id="fabric-edit-colors"></div>
+        <div class="field"><label>Tags</label><input type="text" id="fabric-edit-tags"></div>
+        <div class="field"><label>Source name</label><input type="text" id="fabric-edit-source-name"></div>
+        <div class="field"><label>Source URL</label><input type="text" id="fabric-edit-source-url"></div>
+      </div>
+      <div class="field"><label>Licence</label><input type="text" id="fabric-edit-license"></div>
+      <div class="field"><label>Description</label><textarea id="fabric-edit-description" rows="2"></textarea></div>
+      <div class="error" id="fabric-edit-error"></div>
+      <div style="display:flex;gap:10px;margin-top:6px;flex-wrap:wrap;">
+        <button type="submit" class="btn-primary">Save Changes</button>
+        <button type="button" class="btn-secondary" id="fabric-edit-cancel">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="outfit-edit-overlay" class="modal-overlay hidden">
+  <div class="modal">
+    <h2 style="font-size:18px;margin-bottom:20px;">Edit Outfit</h2>
+    <form id="outfit-edit-form">
+      <div class="fields-2col">
+        <div class="field"><label>Name</label><input type="text" id="outfit-edit-name" required></div>
+        <div class="field"><label>Garment template</label><select id="outfit-edit-template"></select></div>
+        <div class="field"><label>Category</label><select id="outfit-edit-category"><option>Men</option><option>Women</option><option>Unisex</option></select></div>
+        <div class="field"><label>Garment type</label><select id="outfit-edit-garment-type"><option value="one-pieces">one-pieces</option><option value="tops">tops</option><option value="bottoms">bottoms</option></select></div>
+        <div class="field"><label>Pattern scale</label><input type="text" id="outfit-edit-scale"></div>
+        <div class="field"><label>Sort order</label><input type="text" id="outfit-edit-sort"></div>
+      </div>
+      <div class="field"><label>Description</label><input type="text" id="outfit-edit-description"></div>
+      <div class="field"><label>Design prompt</label><input type="text" id="outfit-edit-prompt"></div>
+      <div class="error" id="outfit-edit-error"></div>
+      <div style="display:flex;gap:10px;margin-top:6px;">
+        <button type="submit" class="btn-primary">Save Changes</button>
+        <button type="button" class="btn-secondary" id="outfit-edit-cancel">Cancel</button>
+      </div>
+    </form>
+  </div>
 </div>
 
 <div id="edit-overlay" class="modal-overlay hidden">
@@ -172,15 +367,15 @@
   <div class="modal" style="max-width:400px;">
     <h2 style="font-size:18px;margin-bottom:18px;">Share for Marketing</h2>
     <div style="display:flex;gap:14px;margin-bottom:20px;align-items:center;">
-      <div style="width:64px;height:80px;border-radius:8px;overflow:hidden;background:#1b1a17;border:1px solid rgba(255,255,255,0.08);flex-shrink:0;">
+      <div style="width:64px;height:80px;border-radius:8px;overflow:hidden;background:var(--surface-2);border:1px solid rgba(var(--border-rgb),0.08);flex-shrink:0;">
         <img id="share-preview-img" style="width:100%;height:100%;object-fit:cover;display:block;">
       </div>
       <div>
         <div id="share-preview-name" style="font-weight:600;font-size:14.5px;margin-bottom:4px;"></div>
-        <div id="share-preview-price" style="color:#c9a769;font-size:13px;"></div>
+        <div id="share-preview-price" style="color:var(--accent);font-size:13px;"></div>
       </div>
     </div>
-    <div style="color:#8a8478;font-size:12.5px;margin-bottom:10px;">Shares the product photo, price, and a link back to try it on — with a rich preview card on WhatsApp, Facebook, and X.</div>
+    <div style="color:var(--text-3);font-size:12.5px;margin-bottom:10px;">Shares the product photo, price, and a link back to try it on — with a rich preview card on WhatsApp, Facebook, and X.</div>
     <div style="display:flex;gap:10px;margin-bottom:20px;">
       <button aria-label="Share to Facebook" id="share-fb-btn" style="width:38px;height:38px;border-radius:50%;border:none;background:#1877F2;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;"><svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M22 12a10 10 0 10-11.5 9.9v-7H7.9V12h2.6V9.8c0-2.6 1.5-4 3.9-4 1.1 0 2.3.2 2.3.2v2.5h-1.3c-1.3 0-1.7.8-1.7 1.6V12h2.9l-.5 2.9h-2.4v7A10 10 0 0022 12z"/></svg></button>
       <button aria-label="Share to Instagram" id="share-ig-btn" style="width:38px;height:38px;border-radius:50%;border:none;background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.3" cy="6.7" r="1" fill="#fff" stroke="none"/></svg></button>
@@ -202,12 +397,12 @@
   <div class="modal" style="max-width:440px;">
     <h2 style="font-size:18px;margin-bottom:18px;">Generate Marketing Video</h2>
     <div style="display:flex;gap:14px;margin-bottom:20px;align-items:center;">
-      <div style="width:64px;height:80px;border-radius:8px;overflow:hidden;background:#1b1a17;border:1px solid rgba(255,255,255,0.08);flex-shrink:0;">
+      <div style="width:64px;height:80px;border-radius:8px;overflow:hidden;background:var(--surface-2);border:1px solid rgba(var(--border-rgb),0.08);flex-shrink:0;">
         <img id="video-preview-img" style="width:100%;height:100%;object-fit:cover;display:block;">
       </div>
       <div>
         <div id="video-preview-name" style="font-weight:600;font-size:14.5px;margin-bottom:4px;"></div>
-        <div style="color:#8a8478;font-size:12px;">Animates this photo into a short 720p video clip.</div>
+        <div style="color:var(--text-3);font-size:12px;">Animates this photo into a short 720p video clip.</div>
       </div>
     </div>
     <div class="fields-2col">
@@ -231,7 +426,7 @@
       <video id="video-player" controls style="width:100%;border-radius:10px;background:#000;display:block;margin-bottom:12px;"></video>
       <button type="button" class="btn-primary" id="video-download-btn" style="width:100%;">Download Video</button>
     </div>
-    <div id="video-status" style="color:#c9a769;font-size:13px;margin-bottom:6px;min-height:16px;"></div>
+    <div id="video-status" style="color:var(--accent);font-size:13px;margin-bottom:6px;min-height:16px;"></div>
     <div class="error" id="video-error"></div>
     <div style="display:flex;gap:10px;margin-top:6px;">
       <button type="button" class="btn-primary" id="video-generate-btn">Generate Video</button>
@@ -285,6 +480,18 @@
   $('password-input').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') $('login-btn').click();
   });
+  function syncThemeButton() {
+    const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+    $('theme-btn').textContent = dark ? 'Cream mode' : 'Dark mode';
+  }
+  $('theme-btn').addEventListener('click', () => {
+    const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'cream' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    try { localStorage.setItem('bbTheme', next); } catch (err) { /* private mode */ }
+    syncThemeButton();
+  });
+  syncThemeButton();
+
   $('logout-btn').addEventListener('click', () => {
     sessionStorage.removeItem('bbAdminAuth');
     authHeader = '';
@@ -625,6 +832,426 @@
       window.open(url, '_blank');
     }
   }
+
+  // ------------------------------------------------------------ Fabric Studio
+  // Catalogue management for the Fabric Studio feature. Everything is
+  // database(JSON store)-driven — no fabric or outfit is hard-coded in the app.
+  let studioTemplates = [];
+
+  function studioAuth(extra) {
+    return Object.assign({ Authorization: authHeader }, extra || {});
+  }
+
+  async function studioApi(path, options) {
+    const opts = Object.assign({}, options || {});
+    opts.headers = studioAuth(opts.headers);
+    const res = await fetch(path, opts);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || 'Request failed.');
+    return data;
+  }
+
+  function switchTab(name) {
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.classList.toggle('active', tab.dataset.tab === name);
+    });
+    ['products', 'fabrics', 'outfits', 'imports'].forEach(key => {
+      $('tab-' + key).classList.toggle('hidden', key !== name);
+    });
+    if (name === 'fabrics') { loadStudioStatus(); loadFabrics(); }
+    if (name === 'outfits') loadOutfits();
+    if (name === 'imports') loadImports();
+  }
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => switchTab(tab.dataset.tab));
+  });
+
+  async function loadStudioStatus() {
+    try {
+      const data = await studioApi('/api/admin/fabric-studio/status');
+      studioTemplates = data.templates || [];
+      fillTemplateSelects();
+      const gen = data.generations || {};
+      const provider = data.provider || {};
+      $('studio-status').innerHTML = [
+        `Provider <b>${escapeHtml(provider.provider)}</b>${provider.configured ? '' : ' <span class="badge badge-pending">not configured</span>'}`,
+        `Fabrics <b>${data.migrations.fabrics}</b>`,
+        `Outfits <b>${data.migrations.outfits}</b>`,
+        `Generations <b>${gen.total || 0}</b>`,
+        `Failures <b>${Math.round((gen.failureRate || 0) * 100)}%</b>`,
+        gen.avgProcessingMs ? `Avg time <b>${(gen.avgProcessingMs / 1000).toFixed(1)}s</b>` : '',
+        gen.totalCreditsUsed != null ? `Credits used <b>${gen.totalCreditsUsed}</b>` : '',
+      ].filter(Boolean).map(part => `<span>${part}</span>`).join('');
+    } catch (err) {
+      $('studio-status').textContent = 'Could not load Fabric Studio status: ' + err.message;
+    }
+  }
+
+  function fillTemplateSelects() {
+    ['outfit-template', 'outfit-edit-template'].forEach(id => {
+      const select = $(id);
+      if (!select) return;
+      const current = select.value;
+      select.innerHTML = studioTemplates.map(t => `<option value="${t}">${t}</option>`).join('');
+      if (current) select.value = current;
+    });
+  }
+
+  function statusBadge(fabric) {
+    if (fabric.reviewStatus === 'pending') return '<span class="badge badge-pending">PENDING REVIEW</span>';
+    if (!fabric.isActive) return '<span class="badge badge-off">HIDDEN</span>';
+    return '<span class="badge badge-live">LIVE</span>';
+  }
+
+  async function loadFabrics() {
+    const data = await studioApi('/api/admin/fabrics');
+    const categories = (data.categories || []).map(c => c.value);
+    $('fabric-category-options').innerHTML = categories.map(v => `<option value="${escapeHtml(v)}">`).join('');
+    $('fabric-pattern-options').innerHTML = ['solid','striped','checked','geometric','floral','dotted','abstract','textured']
+      .map(v => `<option value="${v}">`).join('');
+    const grid = $('fabrics-grid');
+    grid.innerHTML = '';
+    $('fabrics-empty').classList.toggle('hidden', (data.items || []).length > 0);
+    (data.items || []).forEach(fabric => {
+      const card = document.createElement('div');
+      card.className = 'item-card';
+      card.innerHTML = `
+        <div class="thumb"><img src="${fabric.thumbnailUrl}" alt=""></div>
+        <div class="body">
+          <div class="name">${escapeHtml(fabric.name)}</div>
+          <div class="meta">${escapeHtml(fabric.category || '')} · ${escapeHtml(fabric.patternType || '—')}</div>
+          <div style="margin-bottom:10px;">${statusBadge(fabric)}</div>
+          <div class="actions">
+            <button class="btn-secondary edit-btn">Edit</button>
+            <button class="btn-secondary reprocess-btn">Reprocess</button>
+            <button class="btn-secondary toggle-btn">${fabric.isActive ? 'Hide' : 'Show'}</button>
+            <button class="btn-danger delete-btn">Delete</button>
+          </div>
+        </div>`;
+      card.querySelector('.edit-btn').addEventListener('click', () => openFabricEdit(fabric));
+      card.querySelector('.reprocess-btn').addEventListener('click', () => reprocessFabric(fabric));
+      card.querySelector('.toggle-btn').addEventListener('click', () => toggleFabric(fabric));
+      card.querySelector('.delete-btn').addEventListener('click', () => deleteFabric(fabric));
+      grid.appendChild(card);
+    });
+  }
+
+  let fabricFile = null;
+  $('fabric-dropzone').addEventListener('click', () => $('fabric-image-input').click());
+  $('fabric-image-input').addEventListener('change', (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    fabricFile = file;
+    const reader = new FileReader();
+    reader.onload = () => {
+      $('fabric-preview-img').src = reader.result;
+      $('fabric-preview-img').classList.remove('hidden');
+      $('fabric-dropzone-hint').classList.add('hidden');
+    };
+    reader.readAsDataURL(file);
+  });
+
+  $('fabric-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    $('fabric-error').textContent = '';
+    if (!fabricFile) { $('fabric-error').textContent = 'Please choose a fabric photo.'; return; }
+    const fd = new FormData();
+    fd.append('name', $('fabric-name').value.trim());
+    fd.append('category', $('fabric-category').value.trim());
+    fd.append('subcategory', $('fabric-subcategory').value.trim());
+    fd.append('pattern_type', $('fabric-pattern').value.trim());
+    fd.append('primary_colors', $('fabric-colors').value.trim());
+    fd.append('tags', $('fabric-tags').value.trim());
+    fd.append('source_name', $('fabric-source-name').value.trim());
+    fd.append('source_url', $('fabric-source-url').value.trim());
+    fd.append('license', $('fabric-license').value.trim());
+    fd.append('description', $('fabric-description').value.trim());
+    fd.append('image', fabricFile);
+    const btn = $('fabric-submit-btn');
+    btn.disabled = true; btn.textContent = 'Adding…';
+    try {
+      await studioApi('/api/admin/fabrics', { method: 'POST', body: fd });
+      $('fabric-form').reset();
+      fabricFile = null;
+      $('fabric-preview-img').classList.add('hidden');
+      $('fabric-dropzone-hint').classList.remove('hidden');
+      loadFabrics();
+      loadStudioStatus();
+    } catch (err) {
+      $('fabric-error').textContent = err.message;
+    } finally {
+      btn.disabled = false; btn.textContent = 'Add Fabric';
+    }
+  });
+
+  let editingFabric = null;
+  let fabricEditFile = null;
+  function openFabricEdit(fabric) {
+    editingFabric = fabric;
+    fabricEditFile = null;
+    $('fabric-edit-name').value = fabric.name || '';
+    $('fabric-edit-category').value = fabric.category || '';
+    $('fabric-edit-subcategory').value = fabric.subcategory || '';
+    $('fabric-edit-pattern').value = fabric.patternType || '';
+    $('fabric-edit-colors').value = (fabric.primaryColors || []).join(', ');
+    $('fabric-edit-tags').value = (fabric.tags || []).join(', ');
+    $('fabric-edit-source-name').value = fabric.sourceName || '';
+    $('fabric-edit-source-url').value = fabric.sourceUrl || '';
+    $('fabric-edit-license').value = fabric.license || '';
+    $('fabric-edit-description').value = fabric.description || '';
+    $('fabric-edit-preview').src = fabric.imageUrl;
+    $('fabric-edit-error').textContent = '';
+    $('fabric-edit-overlay').classList.remove('hidden');
+  }
+  $('fabric-edit-dropzone').addEventListener('click', () => $('fabric-edit-image').click());
+  $('fabric-edit-image').addEventListener('change', (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    fabricEditFile = file;
+    const reader = new FileReader();
+    reader.onload = () => { $('fabric-edit-preview').src = reader.result; };
+    reader.readAsDataURL(file);
+  });
+  $('fabric-edit-cancel').addEventListener('click', () => {
+    $('fabric-edit-overlay').classList.add('hidden');
+    editingFabric = null;
+  });
+  $('fabric-edit-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!editingFabric) return;
+    const fd = new FormData();
+    fd.append('name', $('fabric-edit-name').value.trim());
+    fd.append('category', $('fabric-edit-category').value.trim());
+    fd.append('subcategory', $('fabric-edit-subcategory').value.trim());
+    fd.append('pattern_type', $('fabric-edit-pattern').value.trim());
+    fd.append('primary_colors', $('fabric-edit-colors').value.trim());
+    fd.append('tags', $('fabric-edit-tags').value.trim());
+    fd.append('source_name', $('fabric-edit-source-name').value.trim());
+    fd.append('source_url', $('fabric-edit-source-url').value.trim());
+    fd.append('license', $('fabric-edit-license').value.trim());
+    fd.append('description', $('fabric-edit-description').value.trim());
+    if (fabricEditFile) fd.append('image', fabricEditFile);
+    try {
+      await studioApi(`/api/admin/fabrics/${encodeURIComponent(editingFabric.id)}`, { method: 'PUT', body: fd });
+      $('fabric-edit-overlay').classList.add('hidden');
+      editingFabric = null;
+      loadFabrics();
+    } catch (err) {
+      $('fabric-edit-error').textContent = err.message;
+    }
+  });
+
+  async function reprocessFabric(fabric) {
+    try {
+      await studioApi(`/api/admin/fabrics/${encodeURIComponent(fabric.id)}/reprocess`, { method: 'POST' });
+      loadFabrics();
+    } catch (err) { alert(err.message); }
+  }
+  async function toggleFabric(fabric) {
+    const path = fabric.isActive
+      ? `/api/admin/fabrics/${encodeURIComponent(fabric.id)}`
+      : `/api/admin/fabrics/${encodeURIComponent(fabric.id)}/activate`;
+    try {
+      await studioApi(path, { method: fabric.isActive ? 'DELETE' : 'POST' });
+      loadFabrics();
+    } catch (err) { alert(err.message); }
+  }
+  async function deleteFabric(fabric) {
+    if (!confirm(`Permanently delete "${fabric.name}" and its processed assets?`)) return;
+    try {
+      await studioApi(`/api/admin/fabrics/${encodeURIComponent(fabric.id)}?hard=1`, { method: 'DELETE' });
+      loadFabrics();
+    } catch (err) { alert(err.message); }
+  }
+
+  // ----------------------------------------------------------------- outfits
+  async function loadOutfits() {
+    const data = await studioApi('/api/admin/outfits');
+    studioTemplates = data.templates || studioTemplates;
+    fillTemplateSelects();
+    const grid = $('outfits-grid');
+    grid.innerHTML = '';
+    (data.items || []).forEach(outfit => {
+      const card = document.createElement('div');
+      card.className = 'item-card';
+      card.innerHTML = `
+        <div class="thumb" style="background:#f7f6f3;"><img src="${outfit.previewImageUrl}" alt=""></div>
+        <div class="body">
+          <div class="name">${escapeHtml(outfit.name)}</div>
+          <div class="meta">${escapeHtml(outfit.category || '')} · ${escapeHtml(outfit.templateId || '')}</div>
+          <div style="margin-bottom:10px;">${outfit.isActive ? '<span class="badge badge-live">LIVE</span>' : '<span class="badge badge-off">HIDDEN</span>'}</div>
+          <div class="actions">
+            <button class="btn-secondary edit-btn">Edit</button>
+            <button class="btn-secondary toggle-btn">${outfit.isActive ? 'Hide' : 'Show'}</button>
+            <button class="btn-danger delete-btn">Delete</button>
+          </div>
+        </div>`;
+      card.querySelector('.edit-btn').addEventListener('click', () => openOutfitEdit(outfit));
+      card.querySelector('.toggle-btn').addEventListener('click', async () => {
+        const path = outfit.isActive
+          ? `/api/admin/outfits/${encodeURIComponent(outfit.id)}`
+          : `/api/admin/outfits/${encodeURIComponent(outfit.id)}/activate`;
+        try {
+          await studioApi(path, { method: outfit.isActive ? 'DELETE' : 'POST' });
+          loadOutfits();
+        } catch (err) { alert(err.message); }
+      });
+      card.querySelector('.delete-btn').addEventListener('click', async () => {
+        if (!confirm(`Permanently delete "${outfit.name}"?`)) return;
+        try {
+          await studioApi(`/api/admin/outfits/${encodeURIComponent(outfit.id)}?hard=1`, { method: 'DELETE' });
+          loadOutfits();
+        } catch (err) { alert(err.message); }
+      });
+      grid.appendChild(card);
+    });
+  }
+
+  $('outfit-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    $('outfit-error').textContent = '';
+    const fd = new FormData();
+    fd.append('name', $('outfit-name').value.trim());
+    fd.append('template_id', $('outfit-template').value);
+    fd.append('category', $('outfit-category').value);
+    fd.append('garment_type', $('outfit-garment-type').value);
+    fd.append('pattern_scale', $('outfit-scale').value.trim());
+    fd.append('sort_order', $('outfit-sort').value.trim());
+    fd.append('description', $('outfit-description').value.trim());
+    fd.append('default_prompt', $('outfit-prompt').value.trim());
+    const preview = $('outfit-preview-input').files[0];
+    if (preview) fd.append('preview', preview);
+    const btn = $('outfit-submit-btn');
+    btn.disabled = true; btn.textContent = 'Adding…';
+    try {
+      await studioApi('/api/admin/outfits', { method: 'POST', body: fd });
+      $('outfit-form').reset();
+      loadOutfits();
+    } catch (err) {
+      $('outfit-error').textContent = err.message;
+    } finally {
+      btn.disabled = false; btn.textContent = 'Add Outfit';
+    }
+  });
+
+  let editingOutfit = null;
+  function openOutfitEdit(outfit) {
+    editingOutfit = outfit;
+    $('outfit-edit-name').value = outfit.name || '';
+    fillTemplateSelects();
+    $('outfit-edit-template').value = outfit.templateId || '';
+    $('outfit-edit-category').value = outfit.category || 'Unisex';
+    $('outfit-edit-garment-type').value = outfit.garmentType || 'one-pieces';
+    $('outfit-edit-scale').value = outfit.patternScale == null ? '' : outfit.patternScale;
+    $('outfit-edit-sort').value = outfit.sortOrder == null ? '' : outfit.sortOrder;
+    $('outfit-edit-description').value = outfit.description || '';
+    $('outfit-edit-prompt').value = outfit.defaultPrompt || '';
+    $('outfit-edit-error').textContent = '';
+    $('outfit-edit-overlay').classList.remove('hidden');
+  }
+  $('outfit-edit-cancel').addEventListener('click', () => {
+    $('outfit-edit-overlay').classList.add('hidden');
+    editingOutfit = null;
+  });
+  $('outfit-edit-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!editingOutfit) return;
+    const fd = new FormData();
+    fd.append('name', $('outfit-edit-name').value.trim());
+    fd.append('template_id', $('outfit-edit-template').value);
+    fd.append('category', $('outfit-edit-category').value);
+    fd.append('garment_type', $('outfit-edit-garment-type').value);
+    fd.append('pattern_scale', $('outfit-edit-scale').value.trim());
+    fd.append('sort_order', $('outfit-edit-sort').value.trim());
+    fd.append('description', $('outfit-edit-description').value.trim());
+    fd.append('default_prompt', $('outfit-edit-prompt').value.trim());
+    try {
+      await studioApi(`/api/admin/outfits/${encodeURIComponent(editingOutfit.id)}`, { method: 'PUT', body: fd });
+      $('outfit-edit-overlay').classList.add('hidden');
+      editingOutfit = null;
+      loadOutfits();
+    } catch (err) {
+      $('outfit-edit-error').textContent = err.message;
+    }
+  });
+
+  // ----------------------------------------------------------------- imports
+  async function loadImports() {
+    const data = await studioApi('/api/admin/fabric-imports');
+    const status = data.status || {};
+    $('import-status').innerHTML = [
+      `Importer <b>${status.enabled ? 'enabled' : 'disabled'}</b>`,
+      `Approved hosts <b>${(status.allowedHosts || []).join(', ') || 'none — set FABRIC_IMPORT_ALLOWED_HOSTS'}</b>`,
+      `Max size <b>${Math.round((status.maxBytes || 0) / 1048576)} MB</b>`,
+    ].map(part => `<span>${part}</span>`).join('');
+
+    const grid = $('imports-grid');
+    grid.innerHTML = '';
+    $('imports-empty').classList.toggle('hidden', (data.items || []).length > 0);
+    (data.items || []).forEach(fabric => {
+      const card = document.createElement('div');
+      card.className = 'item-card';
+      card.innerHTML = `
+        <div class="thumb"><img src="${fabric.thumbnailUrl}" alt=""></div>
+        <div class="body">
+          <div class="name">${escapeHtml(fabric.name)}</div>
+          <div class="meta">${escapeHtml(fabric.category || '')} · ${escapeHtml(fabric.patternType || '')}</div>
+          <div class="meta" style="word-break:break-all;">${escapeHtml(fabric.sourceUrl || '')}</div>
+          <div style="margin-bottom:10px;">${fabric.license ? '<span class="badge badge-live">LICENCE RECORDED</span>' : '<span class="badge badge-pending">LICENCE MISSING</span>'}</div>
+          <div class="actions">
+            <button class="btn-secondary edit-btn">Edit details</button>
+            <button class="btn-secondary publish-btn">Publish</button>
+            <button class="btn-danger reject-btn">Reject</button>
+          </div>
+        </div>`;
+      card.querySelector('.edit-btn').addEventListener('click', () => openFabricEdit(fabric));
+      card.querySelector('.publish-btn').addEventListener('click', async () => {
+        try {
+          await studioApi(`/api/admin/fabric-imports/${encodeURIComponent(fabric.id)}/publish`, { method: 'POST' });
+          loadImports();
+        } catch (err) { alert(err.message); }
+      });
+      card.querySelector('.reject-btn').addEventListener('click', async () => {
+        const reason = prompt('Why is this being rejected? (optional)') || '';
+        try {
+          await studioApi(`/api/admin/fabric-imports/${encodeURIComponent(fabric.id)}/reject`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reason }),
+          });
+          loadImports();
+        } catch (err) { alert(err.message); }
+      });
+      grid.appendChild(card);
+    });
+  }
+
+  $('import-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    $('import-error').textContent = '';
+    const btn = $('import-submit-btn');
+    btn.disabled = true; btn.textContent = 'Fetching…';
+    try {
+      await studioApi('/api/admin/fabric-imports', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: $('import-url').value.trim(),
+          name: $('import-name').value.trim(),
+          category: $('import-category').value.trim(),
+          source_name: $('import-source-name').value.trim(),
+          license: $('import-license').value.trim(),
+          attribution: $('import-attribution').value.trim(),
+        }),
+      });
+      $('import-form').reset();
+      loadImports();
+    } catch (err) {
+      $('import-error').textContent = err.message;
+    } finally {
+      btn.disabled = false; btn.textContent = 'Fetch for review';
+    }
+  });
 
   if (authHeader) {
     fetch('/api/admin/ping', { headers: { Authorization: authHeader } }).then(res => {

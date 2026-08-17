@@ -1,4 +1,4 @@
-const CACHE = 'apparel-tryon-v2';
+const CACHE = 'apparel-tryon-v3';
 const APP_SHELL = [
   './index.html',
   './support.js',
@@ -31,6 +31,17 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return;
+
+  // Never cache API calls or a customer's generated images. The cache-first
+  // branch below would otherwise replay a stale "processing" status forever
+  // while a try-on or a Fabric Studio design is being polled, and would serve
+  // one person's saved result to the next visitor on a shared device.
+  const path = new URL(req.url).pathname;
+  if (path.startsWith('/api/') || path.startsWith('/media/generations/')) return;
+
+  // Video is served with Range requests; the Cache API cannot store a 206, and
+  // replaying a whole file to a range request breaks seeking. Let it stream.
+  if (req.destination === 'video' || /\.(mp4|webm|mov)$/i.test(path)) return;
 
   if (req.mode === 'navigate' || req.destination === 'document') {
     event.respondWith(

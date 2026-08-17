@@ -11,7 +11,7 @@
 <helmet>
   <title>BB Apparel — Virtual Try-On</title>
   <link rel="manifest" href="./manifest.webmanifest">
-  <meta name="theme-color" content="#0b0b0a">
+  <meta name="theme-color" content="#F6F2EA" id="theme-color-meta">
   <meta name="description" content="Upload your photo and virtually try on suits, blazers, and dresses before you buy — powered by AI.">
   <link rel="icon" href="./icons/icon-192.png" type="image/png">
   <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
@@ -22,9 +22,90 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
+    /* ================= THEME TOKENS =================
+       Two themes, one set of semantic tokens. Every colour in the markup is a
+       var() reference, so a theme is a block of values rather than a fork of
+       the UI. Cream is the default; dark is opt-in (or the OS preference on a
+       first visit). Swap --accent / --cta-* to re-brand without touching markup. */
+    :root {
+      color-scheme: light;
+      --bg: #F6F2EA;
+      --bg-veil: rgba(246,242,234,0.82);
+      --surface: #FFFFFF;
+      --surface-2: #F1ECE2;
+      --surface-3: #EBE5D9;
+      --well: #F3EFE6;
+      --text: #1C1710;
+      --text-2: #514A3C;
+      --text-3: #6E6757;
+      --text-4: #948D7C;
+      --nav-text: #3E382C;
+      --accent: #8A6410;
+      --accent-rgb: 138,100,16;
+      --accent-soft: #F6EEDA;
+      --cta-from: #2A241C;
+      --cta-to: #17130A;
+      --on-accent: #FFFFFF;
+      --on-scrim: #FFFFFF;
+      --accent-on-scrim: #E8C87A;
+      --border-rgb: 23,19,52;
+      --danger: #B3261E;
+      --danger-text: #8C1D18;
+      --danger-bg: rgba(179,38,30,0.08);
+      --danger-border: rgba(179,38,30,0.28);
+      --gold: #C9962B;
+      --shadow-sm: 0 2px 8px rgba(28,23,16,0.06);
+      --shadow-card: 0 8px 28px rgba(28,23,16,0.08);
+      --shadow-lg: 0 20px 60px rgba(28,23,16,0.16);
+      --photo-bg: #F7F6F3;
+      --logo-tile: #17130A;
+      --logo-tile-pad: 6px;
+    }
+    [data-theme="dark"] {
+      color-scheme: dark;
+      --bg: #0F0D0B;
+      --bg-veil: rgba(15,13,11,0.85);
+      --surface: #1A1713;
+      --surface-2: #221E19;
+      --surface-3: #27221C;
+      --well: #131009;
+      --text: #F4F1EA;
+      --text-2: #C6BFB1;
+      --text-3: #968F81;
+      --text-4: #746E62;
+      --nav-text: #D9D3C6;
+      --accent: #D8B25A;
+      --accent-rgb: 216,178,90;
+      --accent-soft: #2A2314;
+      --cta-from: #D8B25A;
+      --cta-to: #A87F28;
+      --on-accent: #1A1408;
+      --on-scrim: #FFFFFF;
+      --accent-on-scrim: #E8C87A;
+      --border-rgb: 255,255,255;
+      --danger: #F0A6A0;
+      --danger-text: #E0B3AB;
+      --danger-bg: rgba(201,80,66,0.12);
+      --danger-border: rgba(201,80,66,0.35);
+      --gold: #D8B25A;
+      --shadow-sm: 0 2px 8px rgba(0,0,0,0.35);
+      --shadow-card: 0 8px 28px rgba(0,0,0,0.35);
+      --shadow-lg: 0 20px 60px rgba(0,0,0,0.5);
+      --photo-bg: #F7F6F3;
+      --logo-tile: transparent;
+      --logo-tile-pad: 0px;
+    }
+    html, body { background: var(--bg); color: var(--text); }
+    body { transition: background-color .25s ease, color .25s ease; }
+    /* Panels read as floating cards, as in the design reference. Matching the
+       trailing ");" keeps --surface-2 / --surface-3 chips out of it, and any
+       element with its own inline box-shadow (modals) still wins. */
+    [style*="background:var(--surface);"] { box-shadow: var(--shadow-card); }
+    input, textarea, select, button { color-scheme: inherit; }
+    input::placeholder, textarea::placeholder { color: var(--text-4); }
     *{box-sizing:border-box;}
     html{overflow-x:hidden;}
-    body{margin:0;background:#0b0b0a;overflow-x:hidden;}
+    body{margin:0;overflow-x:hidden;}
     img{max-width:100%;}
     @keyframes vt-spin{to{transform:rotate(360deg)}}
     @keyframes vt-fadeup{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
@@ -33,17 +114,20 @@
     /* ---------- Responsive layer ---------- */
     .vt-burger { display:none; }
     .vt-mobile-menu { display:none; }
+    .vt-hero-strip { display:grid; grid-template-columns:repeat(4,1fr); gap:18px; }
     @media (max-width:900px){
       header, section, footer { padding-left:24px !important; padding-right:24px !important; }
       .vt-hero { grid-template-columns:1fr !important; gap:28px !important; }
-      .vt-hero-media { height:380px !important; }
+      .vt-hero-strip { grid-template-columns:repeat(2,1fr) !important; }
       .vt-catalog-layout { grid-template-columns:1fr !important; }
       .vt-catalog-sidebar { position:static !important; }
       .vt-grid-3 { grid-template-columns:repeat(2,1fr) !important; }
       .vt-grid-4 { grid-template-columns:repeat(2,1fr) !important; }
       .vt-footer-grid { grid-template-columns:1fr 1fr !important; gap:28px !important; }
     }
-    @media (max-width:700px){
+    /* Seven nav items (Fabric Studio + My Designs included) stop fitting on one
+       line well before the old 700px breakpoint, so collapse to the menu earlier. */
+    @media (max-width:1080px){
       .vt-nav-desktop { display:none !important; }
       .vt-burger { display:flex !important; }
       .vt-mobile-menu { display:flex !important; }
@@ -55,13 +139,13 @@
       .vt-header { padding-top:14px !important; padding-bottom:14px !important; }
       .vt-brand-text { display:none; }
       .vt-stats-row { gap:24px !important; }
-      .vt-hero-media { height:260px !important; }
       .vt-grid-2 { grid-template-columns:1fr !important; }
       .vt-grid-3 { grid-template-columns:1fr !important; }
       .vt-grid-4 { grid-template-columns:1fr !important; }
       .vt-footer-grid { grid-template-columns:1fr !important; }
       .vt-footer-bottom { flex-direction:column !important; gap:8px !important; text-align:center !important; }
       .vt-photo-box { height:380px !important; }
+      .vt-hero-strip { grid-template-columns:1fr !important; }
     }
     @media (max-width:480px){
       .vt-tryon-now { display:none !important; }
@@ -69,6 +153,18 @@
   </style>
   <script src="./image-slot.js"></script>
   <script>
+    // Runs before paint: pick the stored theme, else follow the OS. Kept tiny
+    // and inline on purpose — a deferred script would flash the wrong theme.
+    (function () {
+      var stored = null;
+      try { stored = window.localStorage.getItem('bbTheme'); } catch (err) { stored = null; }
+      var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      var theme = (stored === 'dark' || stored === 'cream') ? stored : (prefersDark ? 'dark' : 'cream');
+      document.documentElement.setAttribute('data-theme', theme);
+      var meta = document.querySelector('meta[name="theme-color"]');
+      if (meta) meta.setAttribute('content', theme === 'dark' ? '#0F0D0B' : '#F6F2EA');
+    })();
+
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js').catch((err) => {
@@ -79,20 +175,20 @@
   </script>
 </helmet>
 
-<div style="background:#0b0b0a;min-height:100vh;font-family:Inter,sans-serif;color:#f2ede4;">
+<div style="background:var(--bg);min-height:100vh;font-family:Inter,sans-serif;color:var(--text);">
 
   <!-- SHARED-LOOK POP-UP -->
   <sc-if value="{{ hasSharePopup }}" hint-placeholder-val="{{ false }}">
     <div style="position:fixed;inset:0;background:rgba(0,0,0,0.65);display:flex;align-items:center;justify-content:center;z-index:300;padding:20px;box-sizing:border-box;" onClick="{{ closeSharePopup }}">
-      <div style="background:#141310;border:1px solid rgba(201,167,105,0.3);border-radius:20px;max-width:360px;width:100%;padding:28px 24px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.5);" onClick="{{ stopPropagation }}">
-        <div style="width:88px;height:88px;border-radius:14px;overflow:hidden;margin:0 auto 18px;border:1px solid rgba(255,255,255,0.12);background:#101009;">
+      <div style="background:var(--surface);border:1px solid rgba(var(--accent-rgb),0.3);border-radius:20px;max-width:360px;width:100%;padding:28px 24px;text-align:center;box-shadow:var(--shadow-lg);" onClick="{{ stopPropagation }}">
+        <div style="width:88px;height:88px;border-radius:14px;overflow:hidden;margin:0 auto 18px;border:1px solid rgba(var(--border-rgb),0.12);background:var(--well);">
           <img src="{{ sharePopupSuitImg }}" alt="{{ sharePopupSuitName }}" style="width:100%;height:100%;object-fit:cover;display:block;">
         </div>
         <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:600;margin-bottom:8px;">See how it looks on you 👀</div>
-        <div style="color:#a39c8e;font-size:13.5px;line-height:1.5;margin-bottom:4px;">Someone shared <strong style="color:#f2ede4;">{{ sharePopupSuitName }}</strong> with you.</div>
-        <div style="color:#c9a769;font-size:13px;margin-bottom:22px;">{{ sharePopupSuitPrice }}</div>
-        <button style="width:100%;background:linear-gradient(180deg,#d8b878,#b5904f);color:#211a0e;border:none;border-radius:999px;padding:14px;font-weight:700;font-size:14.5px;cursor:pointer;margin-bottom:10px;" onClick="{{ tryOnFromSharePopup }}">Try It On Yourself</button>
-        <button style="width:100%;background:transparent;border:1px solid rgba(255,255,255,0.15);color:#8a8478;border-radius:999px;padding:12px;font-size:13px;cursor:pointer;" onClick="{{ closeSharePopup }}">Maybe Later</button>
+        <div style="color:var(--text-2);font-size:13.5px;line-height:1.5;margin-bottom:4px;">Someone shared <strong style="color:var(--text);">{{ sharePopupSuitName }}</strong> with you.</div>
+        <div style="color:var(--accent);font-size:13px;margin-bottom:22px;">{{ sharePopupSuitPrice }}</div>
+        <button style="width:100%;background:linear-gradient(180deg,var(--cta-from),var(--cta-to));color:var(--on-accent);border:none;border-radius:999px;padding:14px;font-weight:700;font-size:14.5px;cursor:pointer;margin-bottom:10px;" onClick="{{ tryOnFromSharePopup }}">Try It On Yourself</button>
+        <button style="width:100%;background:transparent;border:1px solid rgba(var(--border-rgb),0.15);color:var(--text-3);border-radius:999px;padding:12px;font-size:13px;cursor:pointer;" onClick="{{ closeSharePopup }}">Maybe Later</button>
       </div>
     </div>
   </sc-if>
@@ -100,50 +196,50 @@
   <!-- GENERATE VIDEO MODAL -->
   <sc-if value="{{ hasVideoModal }}" hint-placeholder-val="{{ false }}">
     <div style="position:fixed;inset:0;background:rgba(0,0,0,0.65);display:flex;align-items:center;justify-content:center;z-index:320;padding:20px;box-sizing:border-box;" onClick="{{ closeVideoModal }}">
-      <div style="background:#141310;border:1px solid rgba(201,167,105,0.3);border-radius:20px;max-width:400px;width:100%;padding:28px 24px;box-shadow:0 20px 60px rgba(0,0,0,0.5);" onClick="{{ stopPropagation }}">
+      <div style="background:var(--surface);border:1px solid rgba(var(--accent-rgb),0.3);border-radius:20px;max-width:400px;width:100%;padding:28px 24px;box-shadow:var(--shadow-lg);" onClick="{{ stopPropagation }}">
         <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:600;margin-bottom:6px;text-align:center;">Turn Your Look Into a Video</div>
-        <div style="color:#a39c8e;font-size:13px;line-height:1.5;margin-bottom:20px;text-align:center;">A short AI-animated clip of your try-on, generated in 720p. <strong style="color:#c9a769;">₦500</strong> for 5 seconds, <strong style="color:#c9a769;">₦1000</strong> for 10.</div>
+        <div style="color:var(--text-2);font-size:13px;line-height:1.5;margin-bottom:20px;text-align:center;">A short AI-animated clip of your try-on, generated in 720p. <strong style="color:var(--accent);">₦500</strong> for 5 seconds, <strong style="color:var(--accent);">₦1000</strong> for 10.</div>
 
         <sc-if value="{{ videoStageForm }}" hint-placeholder-val="{{ true }}">
           <sc-if value="{{ paymentTestMode }}" hint-placeholder-val="{{ false }}">
-            <div style="background:rgba(201,167,105,0.1);border:1px solid rgba(201,167,105,0.3);border-radius:10px;padding:10px 12px;font-size:12px;color:#c9a769;text-align:center;margin-bottom:16px;">Testing mode — video generation is free right now, no payment will be charged.</div>
+            <div style="background:rgba(var(--accent-rgb),0.1);border:1px solid rgba(var(--accent-rgb),0.3);border-radius:10px;padding:10px 12px;font-size:12px;color:var(--accent);text-align:center;margin-bottom:16px;">Testing mode — video generation is free right now, no payment will be charged.</div>
           </sc-if>
           <div style="text-align:left;margin-bottom:14px;">
-            <label style="display:block;font-size:12px;color:#8a8478;margin-bottom:6px;">Email (for your payment receipt)</label>
-            <input type="text" value="{{ videoEmail }}" onChange="{{ setVideoEmail }}" placeholder="you@example.com" style="width:100%;box-sizing:border-box;background:#1b1a17;border:1px solid rgba(255,255,255,0.1);color:#f2ede4;border-radius:10px;padding:11px 13px;font-size:14px;outline:none;">
+            <label style="display:block;font-size:12px;color:var(--text-3);margin-bottom:6px;">Email (for your payment receipt)</label>
+            <input type="text" value="{{ videoEmail }}" onChange="{{ setVideoEmail }}" placeholder="you@example.com" style="width:100%;box-sizing:border-box;background:var(--surface-2);border:1px solid rgba(var(--border-rgb),0.1);color:var(--text);border-radius:10px;padding:11px 13px;font-size:14px;outline:none;">
           </div>
           <div style="text-align:left;margin-bottom:18px;">
-            <label style="display:block;font-size:12px;color:#8a8478;margin-bottom:8px;">Clip length</label>
+            <label style="display:block;font-size:12px;color:var(--text-3);margin-bottom:8px;">Clip length</label>
             <div style="display:flex;gap:10px;">
               <button style="flex:1;padding:11px;border-radius:10px;font-size:13.5px;font-weight:600;cursor:pointer;background:{{ video5Bg }};color:{{ video5Color }};border:1px solid {{ video5Border }};" onClick="{{ setVideoDuration5 }}">5 seconds · ₦500</button>
               <button style="flex:1;padding:11px;border-radius:10px;font-size:13.5px;font-weight:600;cursor:pointer;background:{{ video10Bg }};color:{{ video10Color }};border:1px solid {{ video10Border }};" onClick="{{ setVideoDuration10 }}">10 seconds · ₦1000</button>
             </div>
           </div>
           <sc-if value="{{ hasVideoError }}" hint-placeholder-val="{{ false }}">
-            <div style="color:#e08a8a;font-size:12.5px;margin-bottom:14px;">{{ videoErrorMsg }}</div>
+            <div style="color:var(--danger-text);font-size:12.5px;margin-bottom:14px;">{{ videoErrorMsg }}</div>
           </sc-if>
-          <button style="width:100%;background:linear-gradient(180deg,#d8b878,#b5904f);color:#211a0e;border:none;border-radius:999px;padding:14px;font-weight:700;font-size:14.5px;cursor:pointer;margin-bottom:10px;" onClick="{{ startVideoPayment }}">{{ videoPayButtonLabel }}</button>
-          <button style="width:100%;background:transparent;border:1px solid rgba(255,255,255,0.15);color:#8a8478;border-radius:999px;padding:12px;font-size:13px;cursor:pointer;" onClick="{{ closeVideoModal }}">Cancel</button>
+          <button style="width:100%;background:linear-gradient(180deg,var(--cta-from),var(--cta-to));color:var(--on-accent);border:none;border-radius:999px;padding:14px;font-weight:700;font-size:14.5px;cursor:pointer;margin-bottom:10px;" onClick="{{ startVideoPayment }}">{{ videoPayButtonLabel }}</button>
+          <button style="width:100%;background:transparent;border:1px solid rgba(var(--border-rgb),0.15);color:var(--text-3);border-radius:999px;padding:12px;font-size:13px;cursor:pointer;" onClick="{{ closeVideoModal }}">Cancel</button>
         </sc-if>
 
         <sc-if value="{{ videoStageBusy }}" hint-placeholder-val="{{ false }}">
           <div style="text-align:center;padding:24px 0;">
-            <div style="width:44px;height:44px;border-radius:50%;border:3px solid rgba(201,167,105,0.2);border-top-color:#c9a769;margin:0 auto 20px;animation:vt-spin 1s linear infinite;"></div>
+            <div style="width:44px;height:44px;border-radius:50%;border:3px solid rgba(var(--accent-rgb),0.2);border-top-color:var(--accent);margin:0 auto 20px;animation:vt-spin 1s linear infinite;"></div>
             <div style="font-weight:600;font-size:14.5px;margin-bottom:6px;">{{ videoBusyTitle }}</div>
-            <div style="color:#8a8478;font-size:12.5px;">{{ videoBusySubtitle }}</div>
+            <div style="color:var(--text-3);font-size:12.5px;">{{ videoBusySubtitle }}</div>
           </div>
         </sc-if>
 
         <sc-if value="{{ videoStageError }}" hint-placeholder-val="{{ false }}">
-          <div style="color:#e08a8a;font-size:13px;margin-bottom:16px;text-align:center;">{{ videoErrorMsg }}</div>
-          <button style="width:100%;background:linear-gradient(180deg,#d8b878,#b5904f);color:#211a0e;border:none;border-radius:999px;padding:14px;font-weight:700;font-size:14.5px;cursor:pointer;margin-bottom:10px;" onClick="{{ retryVideoGeneration }}">Try Again</button>
-          <button style="width:100%;background:transparent;border:1px solid rgba(255,255,255,0.15);color:#8a8478;border-radius:999px;padding:12px;font-size:13px;cursor:pointer;" onClick="{{ closeVideoModal }}">Close</button>
+          <div style="color:var(--danger-text);font-size:13px;margin-bottom:16px;text-align:center;">{{ videoErrorMsg }}</div>
+          <button style="width:100%;background:linear-gradient(180deg,var(--cta-from),var(--cta-to));color:var(--on-accent);border:none;border-radius:999px;padding:14px;font-weight:700;font-size:14.5px;cursor:pointer;margin-bottom:10px;" onClick="{{ retryVideoGeneration }}">Try Again</button>
+          <button style="width:100%;background:transparent;border:1px solid rgba(var(--border-rgb),0.15);color:var(--text-3);border-radius:999px;padding:12px;font-size:13px;cursor:pointer;" onClick="{{ closeVideoModal }}">Close</button>
         </sc-if>
 
         <sc-if value="{{ videoStageDone }}" hint-placeholder-val="{{ false }}">
-          <video src="{{ videoResultUrl }}" controls style="width:100%;border-radius:12px;background:#000;display:block;margin-bottom:16px;"></video>
-          <button style="width:100%;background:linear-gradient(180deg,#d8b878,#b5904f);color:#211a0e;border:none;border-radius:999px;padding:14px;font-weight:700;font-size:14.5px;cursor:pointer;margin-bottom:10px;" onClick="{{ downloadVideo }}">Download Video</button>
-          <button style="width:100%;background:transparent;border:1px solid rgba(255,255,255,0.15);color:#8a8478;border-radius:999px;padding:12px;font-size:13px;cursor:pointer;" onClick="{{ closeVideoModal }}">Close</button>
+          <video src="{{ videoResultUrl }}" controls="controls" style="width:100%;border-radius:12px;background:#000;display:block;margin-bottom:16px;"></video>
+          <button style="width:100%;background:linear-gradient(180deg,var(--cta-from),var(--cta-to));color:var(--on-accent);border:none;border-radius:999px;padding:14px;font-weight:700;font-size:14.5px;cursor:pointer;margin-bottom:10px;" onClick="{{ downloadVideo }}">Download Video</button>
+          <button style="width:100%;background:transparent;border:1px solid rgba(var(--border-rgb),0.15);color:var(--text-3);border-radius:999px;padding:12px;font-size:13px;cursor:pointer;" onClick="{{ closeVideoModal }}">Close</button>
         </sc-if>
       </div>
     </div>
@@ -151,38 +247,40 @@
 
   <!-- SHARE TOAST -->
   <sc-if value="{{ hasShareToast }}" hint-placeholder-val="{{ false }}">
-    <div style="position:fixed;left:16px;right:16px;bottom:16px;max-width:380px;margin:0 auto;background:#1f1d18;border:1px solid rgba(201,167,105,0.3);border-radius:12px;padding:14px 18px;font-size:13px;color:#f2ede4;text-align:center;box-shadow:0 12px 32px rgba(0,0,0,0.45);z-index:250;">{{ shareToast }}</div>
+    <div style="position:fixed;left:16px;right:16px;bottom:16px;max-width:380px;margin:0 auto;background:var(--surface-3);border:1px solid rgba(var(--accent-rgb),0.3);border-radius:12px;padding:14px 18px;font-size:13px;color:var(--text);text-align:center;box-shadow:var(--shadow-lg);z-index:250;">{{ shareToast }}</div>
   </sc-if>
 
   <!-- PWA INSTALL BANNER -->
   <sc-if value="{{ showInstallBanner }}" hint-placeholder-val="{{ false }}">
-    <div style="position:fixed;left:16px;right:16px;bottom:16px;max-width:420px;margin:0 auto;background:#141310;border:1px solid rgba(201,167,105,0.3);border-radius:16px;padding:16px 18px;display:flex;align-items:center;gap:14px;box-shadow:0 12px 32px rgba(0,0,0,0.45);z-index:200;">
+    <div style="position:fixed;left:16px;right:16px;bottom:16px;max-width:420px;margin:0 auto;background:var(--surface);border:1px solid rgba(var(--accent-rgb),0.3);border-radius:16px;padding:16px 18px;display:flex;align-items:center;gap:14px;box-shadow:var(--shadow-lg);z-index:200;">
       <img src="./icons/icon-96.png" alt="BB Apparel" style="width:44px;height:44px;border-radius:12px;flex-shrink:0;">
       <div style="flex:1;min-width:0;">
         <div style="font-weight:700;font-size:14px;margin-bottom:2px;">Install BB Apparel</div>
         <sc-if value="{{ isIosInstall }}" hint-placeholder-val="{{ false }}">
-          <div style="color:#a39c8e;font-size:12px;line-height:1.4;">Tap <strong>Share</strong> then <strong>Add to Home Screen</strong> for the full app experience.</div>
+          <div style="color:var(--text-2);font-size:12px;line-height:1.4;">Tap <strong>Share</strong> then <strong>Add to Home Screen</strong> for the full app experience.</div>
         </sc-if>
         <sc-if value="{{ isNotIosInstall }}" hint-placeholder-val="{{ true }}">
-          <div style="color:#a39c8e;font-size:12px;line-height:1.4;">Add it to your home screen for quick, full-screen access.</div>
+          <div style="color:var(--text-2);font-size:12px;line-height:1.4;">Add it to your home screen for quick, full-screen access.</div>
         </sc-if>
       </div>
       <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
         <sc-if value="{{ isNotIosInstall }}" hint-placeholder-val="{{ true }}">
-          <button style="background:linear-gradient(180deg,#d8b878,#b5904f);color:#211a0e;border:none;border-radius:999px;padding:8px 16px;font-weight:700;font-size:12.5px;cursor:pointer;white-space:nowrap;" onClick="{{ installApp }}">Install</button>
+          <button style="background:linear-gradient(180deg,var(--cta-from),var(--cta-to));color:var(--on-accent);border:none;border-radius:999px;padding:8px 16px;font-weight:700;font-size:12.5px;cursor:pointer;white-space:nowrap;" onClick="{{ installApp }}">Install</button>
         </sc-if>
-        <button style="background:transparent;border:1px solid rgba(255,255,255,0.15);color:#8a8478;border-radius:999px;padding:8px 12px;font-size:11.5px;cursor:pointer;" onClick="{{ dismissInstallBanner }}">Not now</button>
+        <button style="background:transparent;border:1px solid rgba(var(--border-rgb),0.15);color:var(--text-3);border-radius:999px;padding:8px 12px;font-size:11.5px;cursor:pointer;" onClick="{{ dismissInstallBanner }}">Not now</button>
       </div>
     </div>
   </sc-if>
 
   <!-- HEADER -->
-  <header class="vt-header" style="display:flex;align-items:center;justify-content:space-between;padding:20px 48px;border-bottom:1px solid rgba(255,255,255,0.07);position:sticky;top:0;background:rgba(11,11,10,0.85);backdrop-filter:blur(10px);z-index:40;">
+  <header class="vt-header" style="display:flex;align-items:center;justify-content:space-between;padding:20px 48px;border-bottom:1px solid rgba(var(--border-rgb),0.07);position:sticky;top:0;background:var(--bg-veil);backdrop-filter:blur(10px);z-index:40;">
     <div style="display:flex;align-items:center;gap:10px;cursor:pointer;flex-shrink:0;" onClick="{{ goHome }}">
-      <img src="assets/bb-logo-mark.png" alt="BB Apparel" style="height:36px;width:auto;display:block;flex-shrink:0;">
+      <span style="background:var(--logo-tile);padding:var(--logo-tile-pad);border-radius:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <img src="assets/bb-logo-mark.png" alt="BB Apparel" style="height:30px;width:auto;display:block;">
+      </span>
       <div class="vt-brand-text" style="line-height:1.1;white-space:nowrap;">
         <div style="font-family:'Playfair Display',serif;font-weight:600;letter-spacing:1px;font-size:15px;">BB APPAREL</div>
-        <div style="font-size:9px;letter-spacing:2px;color:#8a8478;">VIRTUAL TRY-ON</div>
+        <div style="font-size:9px;letter-spacing:2px;color:var(--text-3);">VIRTUAL TRY-ON</div>
       </div>
     </div>
     <nav class="vt-nav-desktop" style="display:flex;gap:6px;">
@@ -190,33 +288,47 @@
       <div style="padding:9px 16px;border-radius:999px;font-size:13.5px;cursor:pointer;background:{{ navBg.catalog }};color:{{ navColor.catalog }};" onClick="{{ goCatalog }}">Catalog</div>
       <div style="padding:9px 16px;border-radius:999px;font-size:13.5px;cursor:pointer;background:{{ navBg.size }};color:{{ navColor.size }};" onClick="{{ goSize }}">Size Finder</div>
       <div style="padding:9px 16px;border-radius:999px;font-size:13.5px;cursor:pointer;background:{{ navBg.tryon }};color:{{ navColor.tryon }};" onClick="{{ openTryOnFresh }}">Virtual Try-On</div>
+      <div style="padding:9px 16px;border-radius:999px;font-size:13.5px;cursor:pointer;background:{{ navBg.studio }};color:{{ navColor.studio }};" onClick="{{ goFabricStudio }}">Fabric Studio</div>
+      <div style="padding:9px 16px;border-radius:999px;font-size:13.5px;cursor:pointer;background:{{ navBg.designs }};color:{{ navColor.designs }};" onClick="{{ goMyDesigns }}">My Designs</div>
       <div style="padding:9px 16px;border-radius:999px;font-size:13.5px;cursor:pointer;background:{{ navBg.saved }};color:{{ navColor.saved }};" onClick="{{ goSaved }}">My Try-Ons {{ savedBadge }}</div>
     </nav>
     <div style="display:flex;align-items:center;gap:14px;">
-      <div class="vt-cart" style="width:38px;height:38px;border-radius:50%;border:1px solid rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;position:relative;cursor:pointer;" onClick="{{ goSaved }}">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#e9e4d8" stroke-width="1.8"><path d="M6 2l1.5 4h9L18 2M3.5 6h17l-1.5 13a2 2 0 01-2 2H7a2 2 0 01-2-2L3.5 6z"/></svg>
-        <sc-if value="{{ hasSaved }}"><div style="position:absolute;top:-4px;right:-4px;background:#c9a769;color:#1a1710;font-size:9px;font-weight:700;border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;">{{ savedBadge }}</div></sc-if>
+      <button aria-label="Toggle colour theme" title="{{ themeToggleLabel }}" style="width:38px;height:38px;border-radius:50%;border:1px solid rgba(var(--border-rgb),0.12);background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;padding:0;" onClick="{{ toggleTheme }}">
+        <sc-if value="{{ themeIsDark }}" hint-placeholder-val="{{ false }}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text)" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        </sc-if>
+        <sc-if value="{{ themeIsLight }}" hint-placeholder-val="{{ true }}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text)" stroke-width="1.8"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/></svg>
+        </sc-if>
+      </button>
+      <div class="vt-cart" style="width:38px;height:38px;border-radius:50%;border:1px solid rgba(var(--border-rgb),0.12);display:flex;align-items:center;justify-content:center;position:relative;cursor:pointer;" onClick="{{ goSaved }}">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text)" stroke-width="1.8"><path d="M6 2l1.5 4h9L18 2M3.5 6h17l-1.5 13a2 2 0 01-2 2H7a2 2 0 01-2-2L3.5 6z"/></svg>
+        <sc-if value="{{ hasSaved }}"><div style="position:absolute;top:-4px;right:-4px;background:var(--accent);color:var(--on-accent);font-size:9px;font-weight:700;border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;">{{ savedBadge }}</div></sc-if>
       </div>
-      <button class="vt-tryon-now" style="display:flex;align-items:center;gap:8px;background:linear-gradient(180deg,#d8b878,#b5904f);color:#211a0e;border:none;border-radius:999px;padding:11px 20px;font-weight:600;font-size:13.5px;cursor:pointer;" onClick="{{ openTryOnFresh }}">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#211a0e" stroke-width="2"><path d="M4 8V6a2 2 0 012-2h2M4 16v2a2 2 0 002 2h2M20 8V6a2 2 0 00-2-2h-2M20 16v2a2 2 0 01-2 2h-2"/><circle cx="12" cy="12" r="3"/></svg>
+      <button class="vt-tryon-now" style="display:flex;align-items:center;gap:8px;background:linear-gradient(180deg,var(--cta-from),var(--cta-to));color:var(--on-accent);border:none;border-radius:999px;padding:11px 20px;font-weight:600;font-size:13.5px;cursor:pointer;" onClick="{{ openTryOnFresh }}">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--on-accent)" stroke-width="2"><path d="M4 8V6a2 2 0 012-2h2M4 16v2a2 2 0 002 2h2M20 8V6a2 2 0 00-2-2h-2M20 16v2a2 2 0 01-2 2h-2"/><circle cx="12" cy="12" r="3"/></svg>
         Try On Now
       </button>
-      <button class="vt-burger" aria-label="Menu" style="display:none;align-items:center;justify-content:center;width:38px;height:38px;border-radius:10px;border:1px solid rgba(255,255,255,0.12);background:transparent;cursor:pointer;flex-shrink:0;" onClick="{{ toggleMobileMenu }}">
+      <button class="vt-burger" aria-label="Menu" style="display:none;align-items:center;justify-content:center;width:38px;height:38px;border-radius:10px;border:1px solid rgba(var(--border-rgb),0.12);background:transparent;cursor:pointer;flex-shrink:0;" onClick="{{ toggleMobileMenu }}">
         <sc-if value="{{ mobileMenuOpen }}" hint-placeholder-val="{{ false }}">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f2ede4" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text)" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>
         </sc-if>
         <sc-if value="{{ mobileMenuClosed }}" hint-placeholder-val="{{ true }}">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f2ede4" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text)" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
         </sc-if>
       </button>
     </div>
     <sc-if value="{{ mobileMenuOpen }}" hint-placeholder-val="{{ false }}">
-      <div class="vt-mobile-menu" style="position:absolute;top:100%;left:0;right:0;background:#141310;border-bottom:1px solid rgba(255,255,255,0.08);padding:10px 18px 18px;display:flex;flex-direction:column;gap:4px;box-shadow:0 12px 24px rgba(0,0,0,0.35);">
+      <div class="vt-mobile-menu" style="position:absolute;top:100%;left:0;right:0;background:var(--surface);border-bottom:1px solid rgba(var(--border-rgb),0.08);padding:10px 18px 18px;display:flex;flex-direction:column;gap:4px;box-shadow:var(--shadow-card);">
         <div style="padding:13px 14px;border-radius:10px;font-size:14.5px;font-weight:600;cursor:pointer;background:{{ navBg.home }};color:{{ navColor.home }};" onClick="{{ goHome }}">Home</div>
         <div style="padding:13px 14px;border-radius:10px;font-size:14.5px;font-weight:600;cursor:pointer;background:{{ navBg.catalog }};color:{{ navColor.catalog }};" onClick="{{ goCatalog }}">Catalog</div>
         <div style="padding:13px 14px;border-radius:10px;font-size:14.5px;font-weight:600;cursor:pointer;background:{{ navBg.size }};color:{{ navColor.size }};" onClick="{{ goSize }}">Size Finder</div>
         <div style="padding:13px 14px;border-radius:10px;font-size:14.5px;font-weight:600;cursor:pointer;background:{{ navBg.tryon }};color:{{ navColor.tryon }};" onClick="{{ openTryOnFresh }}">Virtual Try-On</div>
+        <div style="padding:13px 14px;border-radius:10px;font-size:14.5px;font-weight:600;cursor:pointer;background:{{ navBg.studio }};color:{{ navColor.studio }};" onClick="{{ goFabricStudio }}">Fabric Studio</div>
+        <div style="padding:13px 14px;border-radius:10px;font-size:14.5px;font-weight:600;cursor:pointer;background:{{ navBg.designs }};color:{{ navColor.designs }};" onClick="{{ goMyDesigns }}">My Designs</div>
         <div style="padding:13px 14px;border-radius:10px;font-size:14.5px;font-weight:600;cursor:pointer;background:{{ navBg.saved }};color:{{ navColor.saved }};" onClick="{{ goSaved }}">My Try-Ons {{ savedBadge }}</div>
+        <div style="height:1px;background:rgba(var(--border-rgb),0.08);margin:6px 0;"></div>
+        <div style="padding:13px 14px;border-radius:10px;font-size:14.5px;font-weight:600;cursor:pointer;color:var(--text-2);display:flex;align-items:center;justify-content:space-between;" onClick="{{ toggleTheme }}">{{ themeToggleLabel }}<span style="font-size:12px;color:var(--accent);">{{ themeName }}</span></div>
       </div>
     </sc-if>
   </header>
@@ -224,71 +336,114 @@
   <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
   <div>
     <!-- HERO -->
-    <section class="vt-hero" style="display:grid;grid-template-columns:1.1fr 1fr;gap:40px;padding:80px 48px 60px;max-width:1400px;margin:0 auto;align-items:center;">
+    <section class="vt-hero" style="display:grid;grid-template-columns:1fr 1.02fr;gap:48px;padding:72px 48px 28px;max-width:1400px;margin:0 auto;align-items:center;">
       <div>
-        <div style="display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(201,167,105,0.4);color:#c9a769;font-size:12px;letter-spacing:1.5px;padding:7px 14px;border-radius:999px;margin-bottom:22px;">
-          <span style="width:6px;height:6px;border-radius:50%;background:#c9a769;display:inline-block;"></span>VIRTUAL TRY-ON EXPERIENCE
+        <div style="display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(var(--accent-rgb),0.35);background:var(--accent-soft);color:var(--accent);font-size:11.5px;letter-spacing:1.5px;padding:7px 14px;border-radius:999px;margin-bottom:24px;">
+          <span style="width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block;"></span>AI VIRTUAL TRY-ON
         </div>
-        <h1 style="font-family:'Playfair Display',serif;font-size:52px;line-height:1.08;margin:0 0 20px;font-weight:600;">Wear it before<br/><span style="color:#c9a769;font-style:italic;">You own it</span></h1>
-        <p style="color:#a39c8e;font-size:16.5px;line-height:1.6;max-width:460px;margin:0 0 30px;">Upload your photo and virtually try on any style from our collection. Find your perfect look before you buy.</p>
-        <div style="display:flex;gap:14px;margin-bottom:38px;flex-wrap:wrap;">
-          <button style="display:flex;align-items:center;gap:9px;background:linear-gradient(180deg,#d8b878,#b5904f);color:#211a0e;border:none;border-radius:999px;padding:14px 26px;font-weight:600;font-size:14.5px;cursor:pointer;" onClick="{{ openTryOnFresh }}">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#211a0e" stroke-width="2"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2"/><circle cx="12" cy="13" r="3"/></svg>
-            Start Try-On
+        <h1 style="font-family:'Playfair Display',serif;font-size:54px;line-height:1.06;margin:0 0 22px;font-weight:600;letter-spacing:-0.5px;">
+          Wear it before<br/><span style="color:var(--accent);">You own it</span>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.6" style="vertical-align:top;margin-left:4px;"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3z"/></svg>
+        </h1>
+        <p style="color:var(--text-2);font-size:16.5px;line-height:1.6;max-width:470px;margin:0 0 30px;">Upload your photo and virtually try on any style from our collection. Find your perfect look before you buy.</p>
+
+        <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:26px;">
+          <button style="display:flex;align-items:center;justify-content:space-between;gap:24px;background:linear-gradient(180deg,var(--cta-from),var(--cta-to));color:var(--on-accent);border:none;border-radius:999px;padding:17px 20px 17px 30px;font-weight:700;font-size:16px;cursor:pointer;box-shadow:var(--shadow-card);" onClick="{{ goFabricStudio }}">
+            Start Your Try-On
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--on-accent)" stroke-width="2.2"><path d="M5 12h13M12 5l7 7-7 7"/></svg>
           </button>
-          <button style="display:flex;align-items:center;gap:8px;background:#efe9dd;color:#1a1710;border:none;border-radius:999px;padding:14px 24px;font-weight:600;font-size:14.5px;cursor:pointer;" onClick="{{ goCatalog }}">
+          <button style="display:flex;align-items:center;gap:8px;background:var(--surface);color:var(--text);border:1px solid rgba(var(--border-rgb),0.12);border-radius:999px;padding:17px 26px;font-weight:600;font-size:15px;cursor:pointer;box-shadow:var(--shadow-sm);" onClick="{{ goCatalog }}">
             Browse Collection
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1a1710" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text)" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
           </button>
         </div>
-        <div class="vt-stats-row" style="display:flex;gap:44px;flex-wrap:wrap;">
-          <div><div style="font-family:'Playfair Display',serif;font-size:22px;color:#c9a769;font-weight:600;">500+</div><div style="font-size:12px;color:#8a8478;">Styles Available</div></div>
-          <div><div style="font-family:'Playfair Display',serif;font-size:22px;color:#c9a769;font-weight:600;">AI</div><div style="font-size:12px;color:#8a8478;">Powered Try-On</div></div>
-          <div><div style="font-family:'Playfair Display',serif;font-size:22px;color:#c9a769;font-weight:600;">Free</div><div style="font-size:12px;color:#8a8478;">To Use</div></div>
+
+        <div class="vt-stats-row" style="display:flex;gap:36px;flex-wrap:wrap;align-items:center;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
+            <span style="font-size:13.5px;color:var(--text-2);"><strong style="color:var(--text);">{{ heroFabricCount }}</strong> fabrics ready to wear</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
+            <span style="font-size:13.5px;color:var(--text-2);"><strong style="color:var(--text);">{{ heroOutfitCount }}</strong> outfit styles</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
+            <span style="font-size:13.5px;color:var(--text-2);">Free to try — no signup</span>
+          </div>
         </div>
       </div>
-      <div class="vt-hero-media" style="position:relative;height:536px;">
-        <img src="assets/hero-ar-1.png" alt="Customer using AI virtual try-on on her phone at home" style="width:100%;height:100%;object-fit:cover;object-position:45% 45%;display:block;border-radius:20px;">
-        <div style="position:absolute;inset:0;border-radius:20px;background:linear-gradient(120deg,#0b0b0a 0%,rgba(11,11,10,0.5) 20%,transparent 48%),linear-gradient(to top,#0b0b0a 0%,transparent 32%);pointer-events:none;"></div>
+
+      <div class="vt-hero-media" style="position:relative;">
+        <div style="border-radius:22px;overflow:hidden;border:1px solid rgba(var(--border-rgb),0.08);box-shadow:var(--shadow-card);background:var(--photo-bg);">
+          <video id="hero-video" src="assets/hero-video.mp4" poster="assets/hero-video-poster.jpg"
+                 autoplay="autoplay" loop="loop" muted="muted" playsinline="playsinline"
+                 preload="metadata" disablepictureinpicture="disablepictureinpicture"
+                 aria-label="A customer browsing styles on her phone"
+                 style="width:100%;aspect-ratio:16/9;object-fit:cover;display:block;background:var(--photo-bg);"></video>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- HERO FEATURE STRIP -->
+    <section style="padding:0 48px 40px;max-width:1400px;margin:0 auto;">
+      <div class="vt-hero-strip" style="background:var(--surface);border:1px solid rgba(var(--border-rgb),0.07);border-radius:20px;padding:24px 28px;">
+        <div style="display:flex;align-items:center;gap:14px;">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.6" style="flex-shrink:0;"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+          <div><div style="font-weight:700;font-size:14.5px;">Realistic Results</div><div style="font-size:12.5px;color:var(--text-3);">AI-powered realism</div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px;">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.6" style="flex-shrink:0;"><path d="M12 3c2 2.6 2 5.4 0 8-2-2.6-2-5.4 0-8zM12 13c2 2.6 2 5.4 0 8-2-2.6-2-5.4 0-8zM3 12c2.6-2 5.4-2 8 0-2.6 2-5.4 2-8 0zM13 12c2.6-2 5.4-2 8 0-2.6 2-5.4 2-8 0z"/></svg>
+          <div><div style="font-weight:700;font-size:14.5px;">Multiple Fabrics/Outfits</div><div style="font-size:12.5px;color:var(--text-3);">Ankara to silk, senator to gown</div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px;">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.6" style="flex-shrink:0;"><path d="M8 4h8l1.6 3.2L21 9v3h-2.5l-1 9H6.5l-1-9H3V9l3.4-1.8L8 4z"/></svg>
+          <div><div style="font-weight:700;font-size:14.5px;">All Styles</div><div style="font-size:12.5px;color:var(--text-3);">Traditional &amp; modern</div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px;">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.6" style="flex-shrink:0;"><path d="M12 3l7 3v6c0 4.2-2.9 7.9-7 9-4.1-1.1-7-4.8-7-9V6l7-3z"/><path d="M9.5 12l1.8 1.8 3.4-3.6"/></svg>
+          <div><div style="font-weight:700;font-size:14.5px;">Private by Default</div><div style="font-size:12.5px;color:var(--text-3);">Your photo stays yours</div></div>
+        </div>
       </div>
     </section>
 
     <!-- HOW IT WORKS -->
     <section style="padding:70px 48px;max-width:1400px;margin:0 auto;text-align:center;">
-      <div style="color:#c9a769;font-size:12px;letter-spacing:2px;margin-bottom:10px;">HOW IT WORKS</div>
+      <div style="color:var(--accent);font-size:12px;letter-spacing:2px;margin-bottom:10px;">HOW IT WORKS</div>
       <h2 style="font-family:'Playfair Display',serif;font-size:34px;font-weight:600;margin:0 0 44px;">Four Simple Steps</h2>
       <div class="vt-grid-4" style="display:grid;grid-template-columns:repeat(4,1fr);gap:20px;text-align:left;">
-        <div style="background:#141310;border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:26px;position:relative;">
-          <div style="position:absolute;top:-12px;right:16px;width:26px;height:26px;border-radius:50%;background:#c9a769;color:#1a1710;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;">1</div>
-          <div style="width:42px;height:42px;border-radius:10px;background:#1f1d18;display:flex;align-items:center;justify-content:center;margin-bottom:18px;">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c9a769" stroke-width="1.8"><path d="M12 3v12M7 8l5-5 5 5M5 21h14"/></svg>
+        <div style="background:var(--surface);border:1px solid rgba(var(--border-rgb),0.07);border-radius:14px;padding:26px;position:relative;">
+          <div style="position:absolute;top:-12px;right:16px;width:26px;height:26px;border-radius:50%;background:var(--accent);color:var(--on-accent);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;">1</div>
+          <div style="width:42px;height:42px;border-radius:10px;background:var(--surface-3);display:flex;align-items:center;justify-content:center;margin-bottom:18px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8"><path d="M12 3v12M7 8l5-5 5 5M5 21h14"/></svg>
           </div>
           <div style="font-weight:600;font-size:15.5px;margin-bottom:8px;">Upload Your Photo</div>
-          <div style="font-size:13px;color:#8a8478;line-height:1.55;">Take a full-body photo or upload one from your gallery. Stand facing the camera for the best results.</div>
+          <div style="font-size:13px;color:var(--text-3);line-height:1.55;">Take a full-body photo or upload one from your gallery. Stand facing the camera for the best results.</div>
         </div>
-        <div style="background:#141310;border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:26px;position:relative;">
-          <div style="position:absolute;top:-12px;right:16px;width:26px;height:26px;border-radius:50%;background:#c9a769;color:#1a1710;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;">2</div>
-          <div style="width:42px;height:42px;border-radius:10px;background:#1f1d18;display:flex;align-items:center;justify-content:center;margin-bottom:18px;">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c9a769" stroke-width="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        <div style="background:var(--surface);border:1px solid rgba(var(--border-rgb),0.07);border-radius:14px;padding:26px;position:relative;">
+          <div style="position:absolute;top:-12px;right:16px;width:26px;height:26px;border-radius:50%;background:var(--accent);color:var(--on-accent);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;">2</div>
+          <div style="width:42px;height:42px;border-radius:10px;background:var(--surface-3);display:flex;align-items:center;justify-content:center;margin-bottom:18px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
           </div>
           <div style="font-weight:600;font-size:15.5px;margin-bottom:8px;">Find Your Size</div>
-          <div style="font-size:13px;color:#8a8478;line-height:1.55;">Enter your height, weight, or key measurements and we'll recommend your perfect jacket size, pant size, and fit type.</div>
+          <div style="font-size:13px;color:var(--text-3);line-height:1.55;">Enter your height, weight, or key measurements and we'll recommend your perfect jacket size, pant size, and fit type.</div>
         </div>
-        <div style="background:#141310;border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:26px;position:relative;">
-          <div style="position:absolute;top:-12px;right:16px;width:26px;height:26px;border-radius:50%;background:#c9a769;color:#1a1710;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;">3</div>
-          <div style="width:42px;height:42px;border-radius:10px;background:#1f1d18;display:flex;align-items:center;justify-content:center;margin-bottom:18px;">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c9a769" stroke-width="1.8"><path d="M9 4h6l1 3h3v2h-2l-1.2 11.2A2 2 0 0113.8 22h-3.6a2 2 0 01-2-1.8L7 9H5V7h3l1-3z"/></svg>
+        <div style="background:var(--surface);border:1px solid rgba(var(--border-rgb),0.07);border-radius:14px;padding:26px;position:relative;">
+          <div style="position:absolute;top:-12px;right:16px;width:26px;height:26px;border-radius:50%;background:var(--accent);color:var(--on-accent);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;">3</div>
+          <div style="width:42px;height:42px;border-radius:10px;background:var(--surface-3);display:flex;align-items:center;justify-content:center;margin-bottom:18px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8"><path d="M9 4h6l1 3h3v2h-2l-1.2 11.2A2 2 0 0113.8 22h-3.6a2 2 0 01-2-1.8L7 9H5V7h3l1-3z"/></svg>
           </div>
           <div style="font-weight:600;font-size:15.5px;margin-bottom:8px;">Choose an Outfit</div>
-          <div style="font-size:13px;color:#8a8478;line-height:1.55;">Browse our extensive catalog and select the suit, tuxedo, or blazer you want to try on virtually.</div>
+          <div style="font-size:13px;color:var(--text-3);line-height:1.55;">Browse our extensive catalog and select the suit, tuxedo, or blazer you want to try on virtually.</div>
         </div>
-        <div style="background:#141310;border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:26px;position:relative;">
-          <div style="position:absolute;top:-12px;right:16px;width:26px;height:26px;border-radius:50%;background:#c9a769;color:#1a1710;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;">4</div>
-          <div style="width:42px;height:42px;border-radius:10px;background:#1f1d18;display:flex;align-items:center;justify-content:center;margin-bottom:18px;">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c9a769" stroke-width="1.8"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+        <div style="background:var(--surface);border:1px solid rgba(var(--border-rgb),0.07);border-radius:14px;padding:26px;position:relative;">
+          <div style="position:absolute;top:-12px;right:16px;width:26px;height:26px;border-radius:50%;background:var(--accent);color:var(--on-accent);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;">4</div>
+          <div style="width:42px;height:42px;border-radius:10px;background:var(--surface-3);display:flex;align-items:center;justify-content:center;margin-bottom:18px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
           </div>
           <div style="font-weight:600;font-size:15.5px;margin-bottom:8px;">See Your Look</div>
-          <div style="font-size:13px;color:#8a8478;line-height:1.55;">Our AI places the suit on your photo so you can see exactly how it looks on you before buying.</div>
+          <div style="font-size:13px;color:var(--text-3);line-height:1.55;">Our AI places the suit on your photo so you can see exactly how it looks on you before buying.</div>
         </div>
       </div>
     </section>
@@ -297,35 +452,35 @@
     <section id="catalog-section" style="padding:80px 48px;max-width:1400px;margin:0 auto;">
       <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:32px;">
         <div>
-          <div style="color:#c9a769;font-size:12px;letter-spacing:2px;margin-bottom:10px;">OUR COLLECTION</div>
+          <div style="color:var(--accent);font-size:12px;letter-spacing:2px;margin-bottom:10px;">OUR COLLECTION</div>
           <h2 style="font-family:'Playfair Display',serif;font-size:32px;font-weight:600;margin:0;">Featured Styles</h2>
         </div>
-        <div style="color:#c9a769;font-size:13.5px;display:flex;align-items:center;gap:6px;cursor:pointer;" onClick="{{ goCatalog }}">View All
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#c9a769" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        <div style="color:var(--accent);font-size:13.5px;display:flex;align-items:center;gap:6px;cursor:pointer;" onClick="{{ goCatalog }}">View All
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
         </div>
       </div>
       <div class="vt-grid-4" style="display:grid;grid-template-columns:repeat(4,1fr);gap:22px;">
         <sc-for list="{{ suits }}" as="suit" hint-placeholder-count="8">
-          <div style="background:#141310;border:1px solid rgba(255,255,255,0.07);border-radius:14px;overflow:hidden;">
-            <div style="height:290px;position:relative;background:#1b1a17;">
+          <div style="background:var(--surface);border:1px solid rgba(var(--border-rgb),0.07);border-radius:14px;overflow:hidden;">
+            <div style="height:290px;position:relative;background:var(--surface-2);">
               <image-slot id="{{ suit.slotId }}" shape="rect" fit="contain" placeholder="Drop product photo" src="{{ suit.img }}"></image-slot>
-              <button style="position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:6px;background:rgba(20,19,16,0.85);color:#f2ede4;border:1px solid rgba(255,255,255,0.15);border-radius:999px;padding:8px 16px;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap;" onClick="{{ suit.tryOn }}">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f2ede4" stroke-width="2"><rect x="3" y="7" width="18" height="13" rx="2"/><circle cx="12" cy="13" r="3"/></svg>
+              <button style="position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:6px;background:rgba(20,19,16,0.85);color:var(--on-scrim);border:1px solid rgba(var(--border-rgb),0.15);border-radius:999px;padding:8px 16px;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap;" onClick="{{ suit.tryOn }}">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--on-scrim)" stroke-width="2"><rect x="3" y="7" width="18" height="13" rx="2"/><circle cx="12" cy="13" r="3"/></svg>
                 Try On
               </button>
             </div>
             <div style="padding:18px;">
-              <div style="font-size:12px;color:#8a8478;margin-bottom:3px;">{{ suit.brand }}</div>
+              <div style="font-size:12px;color:var(--text-3);margin-bottom:3px;">{{ suit.brand }}</div>
               <div style="font-weight:600;font-size:16px;margin-bottom:9px;">{{ suit.name }}</div>
               <div style="display:flex;flex-wrap:wrap;gap:6px;row-gap:6px;margin-bottom:12px;">
                 <sc-for list="{{ suit.tags }}" as="tag" hint-placeholder-count="3">
-                  <span style="font-size:10.5px;color:#a39c8e;background:#1f1d18;border-radius:5px;padding:3px 8px;">{{ tag }}</span>
+                  <span style="font-size:10.5px;color:var(--text-2);background:var(--surface-3);border-radius:5px;padding:3px 8px;">{{ tag }}</span>
                 </sc-for>
               </div>
               <div style="display:flex;align-items:center;justify-content:space-between;">
-                <div><span style="font-weight:700;font-size:16px;color:#c9a769;">{{ suit.price }}</span><div style="font-size:11px;color:#6f6a5f;">{{ suit.category }}</div></div>
-                <button style="display:flex;align-items:center;gap:6px;background:#1f1d18;border:1px solid rgba(255,255,255,0.1);color:#f2ede4;border-radius:999px;padding:7px 14px;font-size:12.5px;cursor:pointer;">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f2ede4" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Add
+                <div><span style="font-weight:700;font-size:16px;color:var(--accent);">{{ suit.price }}</span><div style="font-size:11px;color:var(--text-4);">{{ suit.category }}</div></div>
+                <button style="display:flex;align-items:center;gap:6px;background:var(--surface-3);border:1px solid rgba(var(--border-rgb),0.1);color:var(--text);border-radius:999px;padding:7px 14px;font-size:12.5px;cursor:pointer;">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text)" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Add
                 </button>
               </div>
             </div>
@@ -336,11 +491,11 @@
 
     <!-- CTA -->
     <section style="padding:80px 48px 100px;text-align:center;">
-      <div style="font-size:28px;color:#c9a769;margin-bottom:16px;">✦</div>
-      <h2 style="font-family:'Playfair Display',serif;font-size:34px;font-weight:600;margin:0 0 12px;">Ready to Find Your <span style="color:#c9a769;font-style:italic;">Perfect Look?</span></h2>
-      <p style="color:#a39c8e;font-size:15.5px;max-width:420px;margin:0 auto 30px;">Upload your photo now and see yourself in any style from our collection in seconds.</p>
-      <button style="display:inline-flex;align-items:center;gap:9px;background:linear-gradient(180deg,#d8b878,#b5904f);color:#211a0e;border:none;border-radius:999px;padding:15px 28px;font-weight:600;font-size:15px;cursor:pointer;" onClick="{{ openTryOnFresh }}">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#211a0e" stroke-width="2"><rect x="3" y="7" width="18" height="13" rx="2"/><circle cx="12" cy="13" r="3"/></svg>
+      <div style="font-size:28px;color:var(--accent);margin-bottom:16px;">✦</div>
+      <h2 style="font-family:'Playfair Display',serif;font-size:34px;font-weight:600;margin:0 0 12px;">Ready to Find Your <span style="color:var(--accent);font-style:italic;">Perfect Look?</span></h2>
+      <p style="color:var(--text-2);font-size:15.5px;max-width:420px;margin:0 auto 30px;">Upload your photo now and see yourself in any style from our collection in seconds.</p>
+      <button style="display:inline-flex;align-items:center;gap:9px;background:linear-gradient(180deg,var(--cta-from),var(--cta-to));color:var(--on-accent);border:none;border-radius:999px;padding:15px 28px;font-weight:600;font-size:15px;cursor:pointer;" onClick="{{ openTryOnFresh }}">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--on-accent)" stroke-width="2"><rect x="3" y="7" width="18" height="13" rx="2"/><circle cx="12" cy="13" r="3"/></svg>
         Start Your Try-On
       </button>
     </section>
@@ -350,31 +505,31 @@
   <!-- CATALOG VIEW -->
   <sc-if value="{{ isCatalog }}" hint-placeholder-val="{{ false }}">
     <section style="padding:60px 48px 100px;max-width:1400px;margin:0 auto;">
-      <div style="color:#c9a769;font-size:12px;letter-spacing:2px;margin-bottom:10px;">OUR COLLECTION</div>
+      <div style="color:var(--accent);font-size:12px;letter-spacing:2px;margin-bottom:10px;">OUR COLLECTION</div>
       <h2 style="font-family:'Playfair Display',serif;font-size:32px;font-weight:600;margin:0 0 30px;">Browse Collection</h2>
       <div class="vt-catalog-layout" style="display:grid;grid-template-columns:220px 1fr;gap:36px;align-items:start;">
-        <div class="vt-catalog-sidebar" style="background:#141310;border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:22px;position:sticky;top:100px;">
+        <div class="vt-catalog-sidebar" style="background:var(--surface);border:1px solid rgba(var(--border-rgb),0.07);border-radius:14px;padding:22px;position:sticky;top:100px;">
           <div style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:14px;margin-bottom:18px;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f2ede4" stroke-width="2"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text)" stroke-width="2"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
             Filters
           </div>
-          <input type="text" value="{{ catalogSearch }}" onChange="{{ setCatalogSearch }}" placeholder="Search styles..." style="width:100%;box-sizing:border-box;background:#1b1a17;border:1px solid rgba(255,255,255,0.1);color:#f2ede4;border-radius:9px;padding:10px 12px;font-size:13px;margin-bottom:22px;" />
+          <input type="text" value="{{ catalogSearch }}" onChange="{{ setCatalogSearch }}" placeholder="Search styles..." style="width:100%;box-sizing:border-box;background:var(--surface-2);border:1px solid rgba(var(--border-rgb),0.1);color:var(--text);border-radius:9px;padding:10px 12px;font-size:13px;margin-bottom:22px;" />
 
-          <div style="font-size:11px;letter-spacing:1px;color:#8a8478;margin-bottom:10px;">CATEGORY</div>
+          <div style="font-size:11px;letter-spacing:1px;color:var(--text-3);margin-bottom:10px;">CATEGORY</div>
           <div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:22px;">
             <sc-for list="{{ categoryPills }}" as="p" hint-placeholder-count="4">
               <div style="padding:6px 12px;border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;background:{{ p.bg }};color:{{ p.color }};" onClick="{{ p.select }}">{{ p.label }}</div>
             </sc-for>
           </div>
 
-          <div style="font-size:11px;letter-spacing:1px;color:#8a8478;margin-bottom:10px;">FIT TYPE</div>
+          <div style="font-size:11px;letter-spacing:1px;color:var(--text-3);margin-bottom:10px;">FIT TYPE</div>
           <div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:22px;">
             <sc-for list="{{ fitPills }}" as="p" hint-placeholder-count="4">
               <div style="padding:6px 12px;border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;background:{{ p.bg }};color:{{ p.color }};" onClick="{{ p.select }}">{{ p.label }}</div>
             </sc-for>
           </div>
 
-          <div style="font-size:11px;letter-spacing:1px;color:#8a8478;margin-bottom:10px;">BRAND</div>
+          <div style="font-size:11px;letter-spacing:1px;color:var(--text-3);margin-bottom:10px;">BRAND</div>
           <div style="display:flex;flex-wrap:wrap;gap:7px;">
             <sc-for list="{{ brandPills }}" as="p" hint-placeholder-count="5">
               <div style="padding:6px 12px;border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;background:{{ p.bg }};color:{{ p.color }};" onClick="{{ p.select }}">{{ p.label }}</div>
@@ -383,26 +538,26 @@
         </div>
 
         <div>
-          <div style="color:#8a8478;font-size:13.5px;margin-bottom:18px;">{{ filteredCount }} styles found</div>
+          <div style="color:var(--text-3);font-size:13.5px;margin-bottom:18px;">{{ filteredCount }} styles found</div>
           <div class="vt-grid-3" style="display:grid;grid-template-columns:repeat(3,1fr);gap:22px;">
             <sc-for list="{{ filteredSuits }}" as="suit" hint-placeholder-count="9">
-              <div style="background:#141310;border:1px solid rgba(255,255,255,0.07);border-radius:14px;overflow:hidden;">
-                <div style="height:290px;position:relative;background:#1b1a17;">
+              <div style="background:var(--surface);border:1px solid rgba(var(--border-rgb),0.07);border-radius:14px;overflow:hidden;">
+                <div style="height:290px;position:relative;background:var(--surface-2);">
                   <image-slot id="{{ suit.slotId }}" shape="rect" fit="contain" placeholder="Drop product photo" src="{{ suit.img }}"></image-slot>
-                  <button style="position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:6px;background:rgba(20,19,16,0.85);color:#f2ede4;border:1px solid rgba(255,255,255,0.15);border-radius:999px;padding:8px 16px;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap;" onClick="{{ suit.tryOn }}">Try On</button>
+                  <button style="position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:6px;background:rgba(20,19,16,0.85);color:var(--on-scrim);border:1px solid rgba(var(--border-rgb),0.15);border-radius:999px;padding:8px 16px;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap;" onClick="{{ suit.tryOn }}">Try On</button>
                 </div>
                 <div style="padding:18px;">
-                  <div style="font-size:12px;color:#8a8478;margin-bottom:3px;">{{ suit.brand }}</div>
+                  <div style="font-size:12px;color:var(--text-3);margin-bottom:3px;">{{ suit.brand }}</div>
                   <div style="font-weight:600;font-size:16px;margin-bottom:9px;">{{ suit.name }}</div>
                   <div style="display:flex;gap:6px;margin-bottom:12px;">
                     <sc-for list="{{ suit.tags }}" as="tag" hint-placeholder-count="3">
-                      <span style="font-size:10.5px;color:#a39c8e;background:#1f1d18;border-radius:5px;padding:3px 8px;">{{ tag }}</span>
+                      <span style="font-size:10.5px;color:var(--text-2);background:var(--surface-3);border-radius:5px;padding:3px 8px;">{{ tag }}</span>
                     </sc-for>
                   </div>
                   <div style="display:flex;align-items:center;justify-content:space-between;">
-                    <div><span style="font-weight:700;font-size:16px;color:#c9a769;">{{ suit.price }}</span><div style="font-size:11px;color:#6f6a5f;">{{ suit.category }}</div></div>
-                    <button style="display:flex;align-items:center;gap:6px;background:#1f1d18;border:1px solid rgba(255,255,255,0.1);color:#f2ede4;border-radius:999px;padding:7px 14px;font-size:12.5px;cursor:pointer;">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f2ede4" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Add
+                    <div><span style="font-weight:700;font-size:16px;color:var(--accent);">{{ suit.price }}</span><div style="font-size:11px;color:var(--text-4);">{{ suit.category }}</div></div>
+                    <button style="display:flex;align-items:center;gap:6px;background:var(--surface-3);border:1px solid rgba(var(--border-rgb),0.1);color:var(--text);border-radius:999px;padding:7px 14px;font-size:12.5px;cursor:pointer;">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text)" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Add
                     </button>
                   </div>
                 </div>
@@ -417,70 +572,70 @@
   <!-- SIZE FINDER VIEW -->
   <sc-if value="{{ isSize }}" hint-placeholder-val="{{ false }}">
     <section style="padding:70px 48px 100px;max-width:760px;margin:0 auto;text-align:center;">
-      <div style="display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(201,167,105,0.4);color:#c9a769;font-size:12px;letter-spacing:1.5px;padding:7px 14px;border-radius:999px;margin-bottom:22px;">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#c9a769" stroke-width="2"><path d="M20.59 13.41L12 22l-9-9V3h10l7.59 7.59a2 2 0 010 2.82z"/><circle cx="7.5" cy="7.5" r="1.5" fill="#c9a769" stroke="none"/></svg>
+      <div style="display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(var(--accent-rgb),0.4);color:var(--accent);font-size:12px;letter-spacing:1.5px;padding:7px 14px;border-radius:999px;margin-bottom:22px;">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M20.59 13.41L12 22l-9-9V3h10l7.59 7.59a2 2 0 010 2.82z"/><circle cx="7.5" cy="7.5" r="1.5" fill="var(--accent)" stroke="none"/></svg>
         REDUCE RETURNS
       </div>
       <h2 style="font-family:'Playfair Display',serif;font-size:36px;font-weight:600;margin:0 0 14px;">Smart Size Finder</h2>
-      <p style="color:#a39c8e;font-size:15px;margin:0 0 40px;">Enter your measurements below and we'll recommend your suit size using our fit chart.</p>
+      <p style="color:var(--text-2);font-size:15px;margin:0 0 40px;">Enter your measurements below and we'll recommend your suit size using our fit chart.</p>
 
-      <div style="background:#141310;border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:28px;text-align:left;margin-bottom:24px;">
+      <div style="background:var(--surface);border:1px solid rgba(var(--border-rgb),0.07);border-radius:16px;padding:28px;text-align:left;margin-bottom:24px;">
         <div style="font-family:'Playfair Display',serif;font-size:17px;font-weight:600;margin-bottom:6px;">Optional: Upload Your Photo</div>
-        <div style="color:#8a8478;font-size:13px;margin-bottom:18px;">Keep a photo of yourself on hand for reference while you enter your measurements below.</div>
-        <div style="border:1px dashed rgba(255,255,255,0.15);border-radius:12px;height:320px;overflow:hidden;position:relative;">
+        <div style="color:var(--text-3);font-size:13px;margin-bottom:18px;">Keep a photo of yourself on hand for reference while you enter your measurements below.</div>
+        <div style="border:1px dashed rgba(var(--border-rgb),0.15);border-radius:12px;height:320px;overflow:hidden;position:relative;">
           <image-slot id="size-photo" shape="rect" fit="contain" placeholder="Click to upload a full-body photo"></image-slot>
         </div>
       </div>
 
-      <div style="background:#141310;border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:28px;text-align:left;margin-bottom:24px;">
+      <div style="background:var(--surface);border:1px solid rgba(var(--border-rgb),0.07);border-radius:16px;padding:28px;text-align:left;margin-bottom:24px;">
         <div style="font-family:'Playfair Display',serif;font-size:17px;font-weight:600;margin-bottom:6px;">Your Measurements</div>
-        <div style="color:#8a8478;font-size:13px;margin-bottom:22px;">Fill in as many as you know. More measurements = more accurate sizing.</div>
+        <div style="color:var(--text-3);font-size:13px;margin-bottom:22px;">Fill in as many as you know. More measurements = more accurate sizing.</div>
         <div class="vt-grid-2" style="display:grid;grid-template-columns:1fr 1fr;gap:18px 16px;">
           <div>
-            <label style="font-size:11.5px;letter-spacing:1px;color:#8a8478;display:block;margin-bottom:8px;">HEIGHT (FT)</label>
-            <div style="position:relative;"><input type="number" value="{{ sizeForm.heightFt }}" onChange="{{ setField.heightFt }}" placeholder="e.g. 5" style="width:100%;box-sizing:border-box;background:#1b1a17;border:1px solid rgba(255,255,255,0.1);color:#f2ede4;border-radius:9px;padding:12px 14px;font-size:14.5px;" /></div>
+            <label style="font-size:11.5px;letter-spacing:1px;color:var(--text-3);display:block;margin-bottom:8px;">HEIGHT (FT)</label>
+            <div style="position:relative;"><input type="number" value="{{ sizeForm.heightFt }}" onChange="{{ setField.heightFt }}" placeholder="e.g. 5" style="width:100%;box-sizing:border-box;background:var(--surface-2);border:1px solid rgba(var(--border-rgb),0.1);color:var(--text);border-radius:9px;padding:12px 14px;font-size:14.5px;" /></div>
           </div>
           <div>
-            <label style="font-size:11.5px;letter-spacing:1px;color:#8a8478;display:block;margin-bottom:8px;">HEIGHT (IN)</label>
-            <div style="position:relative;"><input type="number" value="{{ sizeForm.heightIn }}" onChange="{{ setField.heightIn }}" placeholder="e.g. 11" style="width:100%;box-sizing:border-box;background:#1b1a17;border:1px solid rgba(255,255,255,0.1);color:#f2ede4;border-radius:9px;padding:12px 14px;font-size:14.5px;" /><span style="position:absolute;right:14px;top:12px;font-size:12.5px;color:#6f6a5f;">in</span></div>
+            <label style="font-size:11.5px;letter-spacing:1px;color:var(--text-3);display:block;margin-bottom:8px;">HEIGHT (IN)</label>
+            <div style="position:relative;"><input type="number" value="{{ sizeForm.heightIn }}" onChange="{{ setField.heightIn }}" placeholder="e.g. 11" style="width:100%;box-sizing:border-box;background:var(--surface-2);border:1px solid rgba(var(--border-rgb),0.1);color:var(--text);border-radius:9px;padding:12px 14px;font-size:14.5px;" /><span style="position:absolute;right:14px;top:12px;font-size:12.5px;color:var(--text-4);">in</span></div>
           </div>
           <div>
-            <label style="font-size:11.5px;letter-spacing:1px;color:#8a8478;display:block;margin-bottom:8px;">WEIGHT</label>
-            <div style="position:relative;"><input type="number" value="{{ sizeForm.weight }}" onChange="{{ setField.weight }}" placeholder="e.g. 180" style="width:100%;box-sizing:border-box;background:#1b1a17;border:1px solid rgba(255,255,255,0.1);color:#f2ede4;border-radius:9px;padding:12px 14px;font-size:14.5px;" /><span style="position:absolute;right:14px;top:12px;font-size:12.5px;color:#6f6a5f;">lbs</span></div>
+            <label style="font-size:11.5px;letter-spacing:1px;color:var(--text-3);display:block;margin-bottom:8px;">WEIGHT</label>
+            <div style="position:relative;"><input type="number" value="{{ sizeForm.weight }}" onChange="{{ setField.weight }}" placeholder="e.g. 180" style="width:100%;box-sizing:border-box;background:var(--surface-2);border:1px solid rgba(var(--border-rgb),0.1);color:var(--text);border-radius:9px;padding:12px 14px;font-size:14.5px;" /><span style="position:absolute;right:14px;top:12px;font-size:12.5px;color:var(--text-4);">lbs</span></div>
           </div>
           <div>
-            <label style="font-size:11.5px;letter-spacing:1px;color:#8a8478;display:block;margin-bottom:8px;">CHEST</label>
-            <div style="position:relative;"><input type="number" value="{{ sizeForm.chest }}" onChange="{{ setField.chest }}" placeholder="e.g. 42" style="width:100%;box-sizing:border-box;background:#1b1a17;border:1px solid rgba(255,255,255,0.1);color:#f2ede4;border-radius:9px;padding:12px 14px;font-size:14.5px;" /><span style="position:absolute;right:14px;top:12px;font-size:12.5px;color:#6f6a5f;">in</span></div>
-            <div style="font-size:11.5px;color:#6f6a5f;margin-top:6px;">Measure around the fullest part of your chest</div>
+            <label style="font-size:11.5px;letter-spacing:1px;color:var(--text-3);display:block;margin-bottom:8px;">CHEST</label>
+            <div style="position:relative;"><input type="number" value="{{ sizeForm.chest }}" onChange="{{ setField.chest }}" placeholder="e.g. 42" style="width:100%;box-sizing:border-box;background:var(--surface-2);border:1px solid rgba(var(--border-rgb),0.1);color:var(--text);border-radius:9px;padding:12px 14px;font-size:14.5px;" /><span style="position:absolute;right:14px;top:12px;font-size:12.5px;color:var(--text-4);">in</span></div>
+            <div style="font-size:11.5px;color:var(--text-4);margin-top:6px;">Measure around the fullest part of your chest</div>
           </div>
           <div>
-            <label style="font-size:11.5px;letter-spacing:1px;color:#8a8478;display:block;margin-bottom:8px;">WAIST</label>
-            <div style="position:relative;"><input type="number" value="{{ sizeForm.waist }}" onChange="{{ setField.waist }}" placeholder="e.g. 34" style="width:100%;box-sizing:border-box;background:#1b1a17;border:1px solid rgba(255,255,255,0.1);color:#f2ede4;border-radius:9px;padding:12px 14px;font-size:14.5px;" /><span style="position:absolute;right:14px;top:12px;font-size:12.5px;color:#6f6a5f;">in</span></div>
-            <div style="font-size:11.5px;color:#6f6a5f;margin-top:6px;">Measure at your natural waistline</div>
+            <label style="font-size:11.5px;letter-spacing:1px;color:var(--text-3);display:block;margin-bottom:8px;">WAIST</label>
+            <div style="position:relative;"><input type="number" value="{{ sizeForm.waist }}" onChange="{{ setField.waist }}" placeholder="e.g. 34" style="width:100%;box-sizing:border-box;background:var(--surface-2);border:1px solid rgba(var(--border-rgb),0.1);color:var(--text);border-radius:9px;padding:12px 14px;font-size:14.5px;" /><span style="position:absolute;right:14px;top:12px;font-size:12.5px;color:var(--text-4);">in</span></div>
+            <div style="font-size:11.5px;color:var(--text-4);margin-top:6px;">Measure at your natural waistline</div>
           </div>
           <div>
-            <label style="font-size:11.5px;letter-spacing:1px;color:#8a8478;display:block;margin-bottom:8px;">HIPS</label>
-            <div style="position:relative;"><input type="number" value="{{ sizeForm.hips }}" onChange="{{ setField.hips }}" placeholder="e.g. 40" style="width:100%;box-sizing:border-box;background:#1b1a17;border:1px solid rgba(255,255,255,0.1);color:#f2ede4;border-radius:9px;padding:12px 14px;font-size:14.5px;" /><span style="position:absolute;right:14px;top:12px;font-size:12.5px;color:#6f6a5f;">in</span></div>
-            <div style="font-size:11.5px;color:#6f6a5f;margin-top:6px;">Measure around the fullest part of your hips</div>
+            <label style="font-size:11.5px;letter-spacing:1px;color:var(--text-3);display:block;margin-bottom:8px;">HIPS</label>
+            <div style="position:relative;"><input type="number" value="{{ sizeForm.hips }}" onChange="{{ setField.hips }}" placeholder="e.g. 40" style="width:100%;box-sizing:border-box;background:var(--surface-2);border:1px solid rgba(var(--border-rgb),0.1);color:var(--text);border-radius:9px;padding:12px 14px;font-size:14.5px;" /><span style="position:absolute;right:14px;top:12px;font-size:12.5px;color:var(--text-4);">in</span></div>
+            <div style="font-size:11.5px;color:var(--text-4);margin-top:6px;">Measure around the fullest part of your hips</div>
           </div>
           <div>
-            <label style="font-size:11.5px;letter-spacing:1px;color:#8a8478;display:block;margin-bottom:8px;">INSEAM</label>
-            <div style="position:relative;"><input type="number" value="{{ sizeForm.inseam }}" onChange="{{ setField.inseam }}" placeholder="e.g. 32" style="width:100%;box-sizing:border-box;background:#1b1a17;border:1px solid rgba(255,255,255,0.1);color:#f2ede4;border-radius:9px;padding:12px 14px;font-size:14.5px;" /><span style="position:absolute;right:14px;top:12px;font-size:12.5px;color:#6f6a5f;">in</span></div>
-            <div style="font-size:11.5px;color:#6f6a5f;margin-top:6px;">Measure from crotch to ankle</div>
+            <label style="font-size:11.5px;letter-spacing:1px;color:var(--text-3);display:block;margin-bottom:8px;">INSEAM</label>
+            <div style="position:relative;"><input type="number" value="{{ sizeForm.inseam }}" onChange="{{ setField.inseam }}" placeholder="e.g. 32" style="width:100%;box-sizing:border-box;background:var(--surface-2);border:1px solid rgba(var(--border-rgb),0.1);color:var(--text);border-radius:9px;padding:12px 14px;font-size:14.5px;" /><span style="position:absolute;right:14px;top:12px;font-size:12.5px;color:var(--text-4);">in</span></div>
+            <div style="font-size:11.5px;color:var(--text-4);margin-top:6px;">Measure from crotch to ankle</div>
           </div>
           <div>
-            <label style="font-size:11.5px;letter-spacing:1px;color:#8a8478;display:block;margin-bottom:8px;">NECK</label>
-            <div style="position:relative;"><input type="number" value="{{ sizeForm.neck }}" onChange="{{ setField.neck }}" placeholder="e.g. 16" style="width:100%;box-sizing:border-box;background:#1b1a17;border:1px solid rgba(255,255,255,0.1);color:#f2ede4;border-radius:9px;padding:12px 14px;font-size:14.5px;" /><span style="position:absolute;right:14px;top:12px;font-size:12.5px;color:#6f6a5f;">in</span></div>
-            <div style="font-size:11.5px;color:#6f6a5f;margin-top:6px;">Measure around base of neck</div>
+            <label style="font-size:11.5px;letter-spacing:1px;color:var(--text-3);display:block;margin-bottom:8px;">NECK</label>
+            <div style="position:relative;"><input type="number" value="{{ sizeForm.neck }}" onChange="{{ setField.neck }}" placeholder="e.g. 16" style="width:100%;box-sizing:border-box;background:var(--surface-2);border:1px solid rgba(var(--border-rgb),0.1);color:var(--text);border-radius:9px;padding:12px 14px;font-size:14.5px;" /><span style="position:absolute;right:14px;top:12px;font-size:12.5px;color:var(--text-4);">in</span></div>
+            <div style="font-size:11.5px;color:var(--text-4);margin-top:6px;">Measure around base of neck</div>
           </div>
           <div>
-            <label style="font-size:11.5px;letter-spacing:1px;color:#8a8478;display:block;margin-bottom:8px;">SHOULDER WIDTH</label>
-            <div style="position:relative;"><input type="number" value="{{ sizeForm.shoulder }}" onChange="{{ setField.shoulder }}" placeholder="e.g. 18" style="width:100%;box-sizing:border-box;background:#1b1a17;border:1px solid rgba(255,255,255,0.1);color:#f2ede4;border-radius:9px;padding:12px 14px;font-size:14.5px;" /><span style="position:absolute;right:14px;top:12px;font-size:12.5px;color:#6f6a5f;">in</span></div>
-            <div style="font-size:11.5px;color:#6f6a5f;margin-top:6px;">Measure across back shoulder to shoulder</div>
+            <label style="font-size:11.5px;letter-spacing:1px;color:var(--text-3);display:block;margin-bottom:8px;">SHOULDER WIDTH</label>
+            <div style="position:relative;"><input type="number" value="{{ sizeForm.shoulder }}" onChange="{{ setField.shoulder }}" placeholder="e.g. 18" style="width:100%;box-sizing:border-box;background:var(--surface-2);border:1px solid rgba(var(--border-rgb),0.1);color:var(--text);border-radius:9px;padding:12px 14px;font-size:14.5px;" /><span style="position:absolute;right:14px;top:12px;font-size:12.5px;color:var(--text-4);">in</span></div>
+            <div style="font-size:11.5px;color:var(--text-4);margin-top:6px;">Measure across back shoulder to shoulder</div>
           </div>
         </div>
         <div style="margin-top:22px;">
-          <label style="font-size:11.5px;letter-spacing:1px;color:#8a8478;display:block;margin-bottom:10px;">PREFERRED FIT STYLE</label>
+          <label style="font-size:11.5px;letter-spacing:1px;color:var(--text-3);display:block;margin-bottom:10px;">PREFERRED FIT STYLE</label>
           <div style="display:flex;gap:10px;">
             <sc-for list="{{ fitOptions }}" as="fit" hint-placeholder-count="3">
               <div style="padding:11px 20px;border-radius:999px;cursor:pointer;font-size:13.5px;font-weight:600;border:1px solid {{ fit.border }};background:{{ fit.bg }};color:{{ fit.color }};" onClick="{{ fit.select }}">{{ fit.label }}</div>
@@ -490,24 +645,24 @@
       </div>
 
       <sc-if value="{{ sizeWarning }}" hint-placeholder-val="{{ true }}">
-        <div style="display:flex;align-items:flex-start;gap:10px;background:#1b1a17;border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:16px 18px;margin-bottom:24px;text-align:left;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c9a769" stroke-width="2" style="flex-shrink:0;margin-top:2px;"><circle cx="12" cy="12" r="10"/><path d="M12 8v5M12 16h.01"/></svg>
-          <div style="font-size:13.5px;color:#a39c8e;line-height:1.5;">Enter at least your height + weight, or chest + waist measurements, to get started.</div>
+        <div style="display:flex;align-items:flex-start;gap:10px;background:var(--surface-2);border:1px solid rgba(var(--border-rgb),0.07);border-radius:12px;padding:16px 18px;margin-bottom:24px;text-align:left;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" style="flex-shrink:0;margin-top:2px;"><circle cx="12" cy="12" r="10"/><path d="M12 8v5M12 16h.01"/></svg>
+          <div style="font-size:13.5px;color:var(--text-2);line-height:1.5;">Enter at least your height + weight, or chest + waist measurements, to get started.</div>
         </div>
       </sc-if>
 
-      <button style="width:100%;display:flex;align-items:center;justify-content:center;gap:9px;background:{{ findSizeBg }};color:#211a0e;border:none;border-radius:12px;padding:16px;font-weight:700;font-size:15px;cursor:pointer;box-sizing:border-box;" onClick="{{ calcSize }}">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#211a0e" stroke-width="2"><path d="M8 3H5a2 2 0 00-2 2v3M16 3h3a2 2 0 012 2v3M8 21H5a2 2 0 01-2-2v-3M16 21h3a2 2 0 002-2v-3"/></svg>
+      <button style="width:100%;display:flex;align-items:center;justify-content:center;gap:9px;background:{{ findSizeBg }};color:{{ findSizeColor }};border:none;border-radius:12px;padding:16px;font-weight:700;font-size:15px;cursor:pointer;box-sizing:border-box;" onClick="{{ calcSize }}">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--on-accent)" stroke-width="2"><path d="M8 3H5a2 2 0 00-2 2v3M16 3h3a2 2 0 012 2v3M8 21H5a2 2 0 01-2-2v-3M16 21h3a2 2 0 002-2v-3"/></svg>
         Find My Size
       </button>
 
       <sc-if value="{{ sizeResult }}" hint-placeholder-val="{{ false }}">
-        <div style="background:#141310;border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:28px;margin-top:24px;text-align:left;animation:vt-fadeup .4s ease;">
-          <div style="font-size:13px;color:#8a8478;margin-bottom:14px;">Recommended Size</div>
+        <div style="background:var(--surface);border:1px solid rgba(var(--border-rgb),0.07);border-radius:16px;padding:28px;margin-top:24px;text-align:left;animation:vt-fadeup .4s ease;">
+          <div style="font-size:13px;color:var(--text-3);margin-bottom:14px;">Recommended Size</div>
           <div style="display:flex;gap:14px;">
-            <div style="flex:1;background:#1b1a17;border-radius:10px;padding:16px;text-align:center;"><div style="font-size:11px;color:#8a8478;">Jacket</div><div style="font-family:'Playfair Display',serif;font-size:24px;color:#c9a769;font-weight:600;">{{ sizeResult.jacket }}</div></div>
-            <div style="flex:1;background:#1b1a17;border-radius:10px;padding:16px;text-align:center;"><div style="font-size:11px;color:#8a8478;">Pants</div><div style="font-family:'Playfair Display',serif;font-size:24px;color:#c9a769;font-weight:600;">{{ sizeResult.pants }}</div></div>
-            <div style="flex:1;background:#1b1a17;border-radius:10px;padding:16px;text-align:center;"><div style="font-size:11px;color:#8a8478;">Fit</div><div style="font-family:'Playfair Display',serif;font-size:24px;color:#c9a769;font-weight:600;">{{ sizeForm.fit }}</div></div>
+            <div style="flex:1;background:var(--surface-2);border-radius:10px;padding:16px;text-align:center;"><div style="font-size:11px;color:var(--text-3);">Jacket</div><div style="font-family:'Playfair Display',serif;font-size:24px;color:var(--accent);font-weight:600;">{{ sizeResult.jacket }}</div></div>
+            <div style="flex:1;background:var(--surface-2);border-radius:10px;padding:16px;text-align:center;"><div style="font-size:11px;color:var(--text-3);">Pants</div><div style="font-family:'Playfair Display',serif;font-size:24px;color:var(--accent);font-weight:600;">{{ sizeResult.pants }}</div></div>
+            <div style="flex:1;background:var(--surface-2);border-radius:10px;padding:16px;text-align:center;"><div style="font-size:11px;color:var(--text-3);">Fit</div><div style="font-family:'Playfair Display',serif;font-size:24px;color:var(--accent);font-weight:600;">{{ sizeForm.fit }}</div></div>
           </div>
         </div>
       </sc-if>
@@ -521,15 +676,15 @@
       <sc-if value="{{ hasSaved }}" hint-placeholder-val="{{ false }}">
         <div class="vt-grid-4" style="display:grid;grid-template-columns:repeat(4,1fr);gap:20px;">
           <sc-for list="{{ savedTryOns }}" as="item" hint-placeholder-count="0">
-            <div style="background:#141310;border:1px solid rgba(255,255,255,0.07);border-radius:14px;overflow:hidden;">
-              <div style="height:220px;position:relative;background:#1b1a17;">
+            <div style="background:var(--surface);border:1px solid rgba(var(--border-rgb),0.07);border-radius:14px;overflow:hidden;">
+              <div style="height:220px;position:relative;background:var(--surface-2);">
                 <img src="{{ item.resultImageUrl }}" alt="{{ item.suit.name }}" style="width:100%;height:100%;object-fit:contain;object-position:center top;display:block;">
-                <div style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,0.6);border-radius:8px;padding:5px 9px;font-size:11px;">{{ item.suit.name }}</div>
+                <div style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,0.6);color:var(--on-scrim);border-radius:8px;padding:5px 9px;font-size:11px;">{{ item.suit.name }}</div>
               </div>
               <div style="padding:14px;">
-                <div style="font-size:12px;color:#8a8478;">{{ item.time }}</div>
+                <div style="font-size:12px;color:var(--text-3);">{{ item.time }}</div>
                 <div style="font-weight:600;font-size:14.5px;margin-bottom:10px;">{{ item.suit.name }}</div>
-                <button style="width:100%;background:transparent;border:1px solid rgba(255,255,255,0.15);color:#f2ede4;border-radius:999px;padding:9px 14px;font-size:12.5px;cursor:pointer;margin-bottom:10px;" onClick="{{ item.download }}">Download</button>
+                <button style="width:100%;background:transparent;border:1px solid rgba(var(--border-rgb),0.15);color:var(--text);border-radius:999px;padding:9px 14px;font-size:12.5px;cursor:pointer;margin-bottom:10px;" onClick="{{ item.download }}">Download</button>
                 <div style="display:flex;justify-content:center;gap:8px;">
                   <button aria-label="Share to Facebook" style="width:28px;height:28px;border-radius:50%;border:none;background:#1877F2;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;" onClick="{{ item.shareFacebook }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="#fff"><path d="M22 12a10 10 0 10-11.5 9.9v-7H7.9V12h2.6V9.8c0-2.6 1.5-4 3.9-4 1.1 0 2.3.2 2.3.2v2.5h-1.3c-1.3 0-1.7.8-1.7 1.6V12h2.9l-.5 2.9h-2.4v7A10 10 0 0022 12z"/></svg></button>
                   <button aria-label="Share to Instagram" style="width:28px;height:28px;border-radius:50%;border:none;background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;" onClick="{{ item.shareInstagram }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.3" cy="6.7" r="1" fill="#fff" stroke="none"/></svg></button>
@@ -542,9 +697,9 @@
         </div>
       </sc-if>
       <sc-if value="{{ hasSavedNot }}" hint-placeholder-val="{{ true }}">
-        <div style="text-align:center;padding:80px 20px;border:1px dashed rgba(255,255,255,0.1);border-radius:16px;">
-          <div style="font-size:15px;color:#8a8478;margin-bottom:20px;">No try-ons saved yet.</div>
-          <button style="background:linear-gradient(180deg,#d8b878,#b5904f);color:#211a0e;border:none;border-radius:999px;padding:13px 24px;font-weight:600;font-size:14px;cursor:pointer;" onClick="{{ openTryOnFresh }}">Start Your First Try-On</button>
+        <div style="text-align:center;padding:80px 20px;border:1px dashed rgba(var(--border-rgb),0.1);border-radius:16px;">
+          <div style="font-size:15px;color:var(--text-3);margin-bottom:20px;">No try-ons saved yet.</div>
+          <button style="background:linear-gradient(180deg,var(--cta-from),var(--cta-to));color:var(--on-accent);border:none;border-radius:999px;padding:13px 24px;font-weight:600;font-size:14px;cursor:pointer;" onClick="{{ openTryOnFresh }}">Start Your First Try-On</button>
         </div>
       </sc-if>
     </section>
@@ -554,9 +709,9 @@
   <sc-if value="{{ isTryOn }}" hint-placeholder-val="{{ false }}">
     <section style="padding:60px 24px 100px;max-width:1000px;margin:0 auto;">
       <div style="text-align:center;margin-bottom:36px;">
-        <div style="color:#c9a769;font-size:12px;letter-spacing:2px;margin-bottom:10px;">AI-POWERED</div>
+        <div style="color:var(--accent);font-size:12px;letter-spacing:2px;margin-bottom:10px;">AI-POWERED</div>
         <h1 style="font-family:'Playfair Display',serif;font-size:38px;font-weight:600;margin:0 0 14px;">Virtual Try-On</h1>
-        <p style="color:#a39c8e;font-size:15px;margin:0;">Upload your photo and preview your selected style before generating your virtual try-on.</p>
+        <p style="color:var(--text-2);font-size:15px;margin:0;">Upload your photo and preview your selected style before generating your virtual try-on.</p>
       </div>
 
       <div style="display:flex;align-items:center;justify-content:center;margin-bottom:48px;flex-wrap:wrap;">
@@ -567,7 +722,7 @@
               <span style="font-size:13.5px;font-weight:600;color:{{ st.textColor }};white-space:nowrap;">{{ st.label }}</span>
             </div>
             <sc-if value="{{ st.showLine }}" hint-placeholder-val="{{ true }}">
-              <div style="width:36px;height:1px;background:rgba(255,255,255,0.15);margin:0 8px;"></div>
+              <div style="width:36px;height:1px;background:rgba(var(--border-rgb),0.15);margin:0 8px;"></div>
             </sc-if>
           </div>
         </sc-for>
@@ -577,64 +732,64 @@
         <div style="max-width:880px;margin:0 auto;display:{{ step1Display }};">
           <div style="text-align:center;margin-bottom:24px;">
             <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:600;margin-bottom:6px;">Your Photo</div>
-            <div style="color:#8a8478;font-size:14px;">Upload a full-body photo and confirm the style you want to try on.</div>
+            <div style="color:var(--text-3);font-size:14px;">Upload a full-body photo and confirm the style you want to try on.</div>
           </div>
           <sc-if value="{{ hasTryOnError }}" hint-placeholder-val="{{ false }}">
-            <div style="display:flex;align-items:flex-start;gap:10px;background:rgba(201,80,66,0.1);border:1px solid rgba(201,80,66,0.35);border-radius:12px;padding:14px 16px;margin:0 auto 20px;max-width:760px;text-align:left;">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#e08a7c" stroke-width="2" style="flex-shrink:0;margin-top:2px;"><circle cx="12" cy="12" r="10"/><path d="M12 8v5M12 16h.01"/></svg>
-              <div style="font-size:13.5px;color:#e0b3ab;line-height:1.5;">{{ tryOnError }}</div>
+            <div style="display:flex;align-items:flex-start;gap:10px;background:var(--danger-bg);border:1px solid var(--danger-border);border-radius:12px;padding:14px 16px;margin:0 auto 20px;max-width:760px;text-align:left;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2" style="flex-shrink:0;margin-top:2px;"><circle cx="12" cy="12" r="10"/><path d="M12 8v5M12 16h.01"/></svg>
+              <div style="font-size:13.5px;color:var(--danger-text);line-height:1.5;">{{ tryOnError }}</div>
             </div>
           </sc-if>
           <div class="vt-grid-2" style="display:grid;grid-template-columns:minmax(0,1.2fr) minmax(280px,.8fr);gap:22px;align-items:start;">
             <div>
-              <div class="vt-photo-box" style="border:1px dashed rgba(255,255,255,0.18);border-radius:16px;height:520px;overflow:hidden;background:#101009;position:relative;display:flex;align-items:center;justify-content:center;" onDragOver="{{ onPhotoDragOver }}" onDrop="{{ onPhotoDrop }}">
+              <div class="vt-photo-box" style="border:1px dashed rgba(var(--border-rgb),0.18);border-radius:16px;height:520px;overflow:hidden;background:var(--well);position:relative;display:flex;align-items:center;justify-content:center;" onDragOver="{{ onPhotoDragOver }}" onDrop="{{ onPhotoDrop }}">
                 <sc-if value="{{ hasUserPhoto }}" hint-placeholder-val="{{ false }}">
                   <img src="{{ userPhotoDataUrl }}" alt="Your photo" style="max-width:100%;max-height:100%;object-fit:contain;display:block;">
-                  <button style="position:absolute;top:12px;right:12px;background:rgba(0,0,0,0.6);color:#f2ede4;border:1px solid rgba(255,255,255,0.15);border-radius:999px;padding:8px 14px;font-size:12.5px;cursor:pointer;" onClick="{{ clearUserPhoto }}">Remove</button>
+                  <button style="position:absolute;top:12px;right:12px;background:rgba(0,0,0,0.6);color:var(--on-scrim);border:1px solid rgba(var(--border-rgb),0.15);border-radius:999px;padding:8px 14px;font-size:12.5px;cursor:pointer;" onClick="{{ clearUserPhoto }}">Remove</button>
                 </sc-if>
                 <sc-if value="{{ hasNoUserPhoto }}" hint-placeholder-val="{{ true }}">
-                  <label style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;cursor:pointer;gap:12px;color:#8a8478;text-align:center;padding:24px;box-sizing:border-box;">
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#8a8478" stroke-width="1.6"><path d="M12 3v12M7 8l5-5 5 5M5 21h14"/></svg>
+                  <label style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;cursor:pointer;gap:12px;color:var(--text-3);text-align:center;padding:24px;box-sizing:border-box;">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="1.6"><path d="M12 3v12M7 8l5-5 5 5M5 21h14"/></svg>
                     <div style="font-size:14px;max-width:340px;">Upload Your Photo — stand facing the camera in a well-lit area</div>
-                    <div style="font-size:11.5px;color:#6f6a5f;">Click to browse, or drag and drop</div>
+                    <div style="font-size:11.5px;color:var(--text-4);">Click to browse, or drag and drop</div>
                     <input type="file" accept="image/*" onChange="{{ onPhotoFileChange }}" style="display:none;">
                   </label>
                 </sc-if>
               </div>
             </div>
-            <div style="background:#141310;border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:22px;">
+            <div style="background:var(--surface);border:1px solid rgba(var(--border-rgb),0.07);border-radius:16px;padding:22px;">
               <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;">
                 <div>
                   <div style="font-family:'Playfair Display',serif;font-size:19px;font-weight:600;margin-bottom:4px;">Selected Style</div>
-                  <div style="color:#8a8478;font-size:13px;">A small preview stays visible while you prepare your try-on.</div>
+                  <div style="color:var(--text-3);font-size:13px;">A small preview stays visible while you prepare your try-on.</div>
                 </div>
-                <div style="width:78px;height:98px;border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.08);background:#1b1a17;flex-shrink:0;">
+                <div style="width:78px;height:98px;border-radius:12px;overflow:hidden;border:1px solid rgba(var(--border-rgb),0.08);background:var(--surface-2);flex-shrink:0;">
                   <sc-if value="{{ hasSelectedSuit }}" hint-placeholder-val="{{ false }}">
                     <image-slot id="{{ selectedSuitSlot }}" shape="rect" fit="contain" src="{{ selectedSuitImg }}"></image-slot>
                   </sc-if>
                   <sc-if value="{{ hasNoSelectedSuit }}" hint-placeholder-val="{{ true }}">
-                    <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.01));">
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6f6a5f" stroke-width="1.7"><path d="M8 6h8l1.5 3H20v2h-1l-1 8.5a2 2 0 01-2 1.5H8a2 2 0 01-2-1.5L5 11H4V9h2.5L8 6z"/></svg>
+                    <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,rgba(var(--border-rgb),0.04),rgba(var(--border-rgb),0.01));">
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--text-4)" stroke-width="1.7"><path d="M8 6h8l1.5 3H20v2h-1l-1 8.5a2 2 0 01-2 1.5H8a2 2 0 01-2-1.5L5 11H4V9h2.5L8 6z"/></svg>
                     </div>
                   </sc-if>
                 </div>
               </div>
               <sc-if value="{{ hasSelectedSuit }}" hint-placeholder-val="{{ false }}">
-                <div style="border:1px solid rgba(201,167,105,0.16);background:rgba(201,167,105,0.06);border-radius:14px;padding:16px;margin-bottom:16px;">
-                  <div style="font-size:11px;letter-spacing:1.4px;color:#c9a769;margin-bottom:8px;">READY TO TRY ON</div>
+                <div style="border:1px solid rgba(var(--accent-rgb),0.16);background:rgba(var(--accent-rgb),0.06);border-radius:14px;padding:16px;margin-bottom:16px;">
+                  <div style="font-size:11px;letter-spacing:1.4px;color:var(--accent);margin-bottom:8px;">READY TO TRY ON</div>
                   <div style="font-weight:600;font-size:16px;margin-bottom:5px;">{{ selectedSuitName }}</div>
-                  <div style="font-size:12.5px;color:#8a8478;margin-bottom:12px;">{{ selectedSuitBrand }} · {{ selectedSuitCategory }}</div>
-                  <div style="display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border-radius:999px;background:#1f1d18;color:#c9a769;font-size:12px;font-weight:600;">{{ selectedSuitPrice }}</div>
+                  <div style="font-size:12.5px;color:var(--text-3);margin-bottom:12px;">{{ selectedSuitBrand }} · {{ selectedSuitCategory }}</div>
+                  <div style="display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border-radius:999px;background:var(--surface-3);color:var(--accent);font-size:12px;font-weight:600;">{{ selectedSuitPrice }}</div>
                 </div>
               </sc-if>
               <sc-if value="{{ hasNoSelectedSuit }}" hint-placeholder-val="{{ true }}">
-                <div style="border:1px dashed rgba(255,255,255,0.12);border-radius:14px;padding:18px;margin-bottom:16px;text-align:center;color:#8a8478;font-size:13.5px;line-height:1.6;">
+                <div style="border:1px dashed rgba(var(--border-rgb),0.12);border-radius:14px;padding:18px;margin-bottom:16px;text-align:center;color:var(--text-3);font-size:13.5px;line-height:1.6;">
                   Pick a style from the collection and it will appear here before you generate the try-on.
                 </div>
               </sc-if>
               <div style="display:flex;flex-direction:column;gap:10px;">
-                <button style="background:#1f1d18;color:#f2ede4;border:1px solid rgba(255,255,255,0.1);border-radius:999px;padding:13px 20px;font-weight:600;font-size:14px;cursor:pointer;" onClick="{{ goCatalog }}">{{ suitActionLabel }}</button>
-                <button style="background:{{ step1ContinueBg }};color:#211a0e;border:none;border-radius:999px;padding:14px 20px;font-weight:700;font-size:14.5px;cursor:{{ step1ContinueCursor }};" onClick="{{ startLook }}">See My Look</button>
+                <button style="background:var(--surface-3);color:var(--text);border:1px solid rgba(var(--border-rgb),0.1);border-radius:999px;padding:13px 20px;font-weight:600;font-size:14px;cursor:pointer;" onClick="{{ goCatalog }}">{{ suitActionLabel }}</button>
+                <button style="background:{{ step1ContinueBg }};color:{{ step1ContinueColor }};border:none;border-radius:999px;padding:14px 20px;font-weight:700;font-size:14.5px;cursor:{{ step1ContinueCursor }};" onClick="{{ startLook }}">See My Look</button>
               </div>
           </div>
         </div>
@@ -643,38 +798,38 @@
       <!-- STEP 2: RESULT -->
         <div style="display:{{ step2Display }};">
           <div style="text-align:center;padding:80px 0;display:{{ processingDisplay }};">
-            <div style="width:64px;height:64px;border-radius:50%;border:3px solid rgba(201,167,105,0.2);border-top-color:#c9a769;margin:0 auto 26px;animation:vt-spin 1s linear infinite;"></div>
+            <div style="width:64px;height:64px;border-radius:50%;border:3px solid rgba(var(--accent-rgb),0.2);border-top-color:var(--accent);margin:0 auto 26px;animation:vt-spin 1s linear infinite;"></div>
             <div style="font-weight:600;font-size:17px;margin-bottom:8px;">Placing the suit on your photo…</div>
-            <div style="color:#8a8478;font-size:13.5px;animation:vt-pulse 1.6s ease-in-out infinite;">Our AI is analyzing fit, lighting, and pose — this can take up to a couple of minutes</div>
+            <div style="color:var(--text-3);font-size:13.5px;animation:vt-pulse 1.6s ease-in-out infinite;">Our AI is analyzing fit, lighting, and pose — this can take up to a couple of minutes</div>
           </div>
           <div style="display:{{ notProcessingDisplay }};">
             <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:600;margin-bottom:6px;text-align:center;">Your Look</div>
-            <div style="color:#8a8478;font-size:14px;margin-bottom:26px;text-align:center;">{{ selectedSuitName }}</div>
+            <div style="color:var(--text-3);font-size:14px;margin-bottom:26px;text-align:center;">{{ selectedSuitName }}</div>
             <div style="display:flex;gap:20px;justify-content:center;margin-bottom:30px;">
-              <div style="width:100%;max-width:320px;height:440px;border-radius:14px;overflow:hidden;position:relative;border:1px solid rgba(255,255,255,0.08);background:#101009;">
+              <div style="width:100%;max-width:320px;height:440px;border-radius:14px;overflow:hidden;position:relative;border:1px solid rgba(var(--border-rgb),0.08);background:var(--well);">
                 <img src="{{ resultImageUrl }}" alt="AI-generated try-on result" style="width:100%;height:100%;object-fit:contain;object-position:center top;display:block;">
-                <div style="position:absolute;top:12px;left:12px;background:rgba(201,167,105,0.9);color:#1a1710;font-size:10.5px;font-weight:700;padding:4px 10px;border-radius:999px;">AI TRY-ON</div>
-                <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(0deg,rgba(0,0,0,0.75),transparent);padding:14px;display:flex;align-items:center;gap:10px;">
-                  <div style="width:44px;height:44px;border-radius:8px;overflow:hidden;border:1px solid rgba(255,255,255,0.2);flex-shrink:0;">
+                <div style="position:absolute;top:12px;left:12px;background:rgba(var(--accent-rgb),0.9);color:var(--on-accent);font-size:10.5px;font-weight:700;padding:4px 10px;border-radius:999px;">AI TRY-ON</div>
+                <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(0deg,rgba(0,0,0,0.75),transparent);padding:14px;display:flex;align-items:center;gap:10px;color:var(--on-scrim);">
+                  <div style="width:44px;height:44px;border-radius:8px;overflow:hidden;border:1px solid rgba(var(--border-rgb),0.2);flex-shrink:0;">
                     <image-slot id="{{ selectedSuitSlot }}" shape="rect" fit="contain" src="{{ selectedSuitImg }}"></image-slot>
                   </div>
                   <div>
                     <div style="font-size:12.5px;font-weight:600;">{{ selectedSuitName }}</div>
-                    <div style="font-size:11.5px;color:#c9a769;">{{ selectedSuitPrice }}</div>
+                    <div style="font-size:11.5px;color:var(--accent-on-scrim);">{{ selectedSuitPrice }}</div>
                   </div>
                 </div>
               </div>
             </div>
             <div style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap;">
-              <button style="background:transparent;border:1px solid rgba(255,255,255,0.15);color:#f2ede4;border-radius:999px;padding:12px 22px;font-size:14px;cursor:pointer;" onClick="{{ toStep1 }}">Use Another Photo</button>
-              <button style="background:#1f1d18;border:1px solid rgba(255,255,255,0.1);color:#f2ede4;border-radius:999px;padding:12px 22px;font-size:14px;cursor:pointer;" onClick="{{ goCatalog }}">Choose Another Suit</button>
-              <button style="background:transparent;border:1px solid rgba(255,255,255,0.15);color:#f2ede4;border-radius:999px;padding:12px 22px;font-size:14px;cursor:pointer;" onClick="{{ downloadImage }}">Download Image</button>
-              <button style="background:#1f1d18;border:1px solid rgba(255,255,255,0.1);color:#f2ede4;border-radius:999px;padding:12px 22px;font-weight:600;font-size:14px;cursor:pointer;" onClick="{{ addToCart }}">{{ cartLabel }}</button>
-              <button style="background:linear-gradient(180deg,#d8b878,#b5904f);color:#211a0e;border:none;border-radius:999px;padding:12px 26px;font-weight:700;font-size:14px;cursor:pointer;" onClick="{{ saveTryOn }}">{{ saveLabel }}</button>
-              <button style="background:transparent;border:1px solid rgba(201,167,105,0.4);color:#c9a769;border-radius:999px;padding:12px 22px;font-weight:600;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;" onClick="{{ openVideoModal }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c9a769" stroke-width="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>Generate Video · from ₦500</button>
+              <button style="background:transparent;border:1px solid rgba(var(--border-rgb),0.15);color:var(--text);border-radius:999px;padding:12px 22px;font-size:14px;cursor:pointer;" onClick="{{ toStep1 }}">Use Another Photo</button>
+              <button style="background:var(--surface-3);border:1px solid rgba(var(--border-rgb),0.1);color:var(--text);border-radius:999px;padding:12px 22px;font-size:14px;cursor:pointer;" onClick="{{ goCatalog }}">Choose Another Suit</button>
+              <button style="background:transparent;border:1px solid rgba(var(--border-rgb),0.15);color:var(--text);border-radius:999px;padding:12px 22px;font-size:14px;cursor:pointer;" onClick="{{ downloadImage }}">Download Image</button>
+              <button style="background:var(--surface-3);border:1px solid rgba(var(--border-rgb),0.1);color:var(--text);border-radius:999px;padding:12px 22px;font-weight:600;font-size:14px;cursor:pointer;" onClick="{{ addToCart }}">{{ cartLabel }}</button>
+              <button style="background:linear-gradient(180deg,var(--cta-from),var(--cta-to));color:var(--on-accent);border:none;border-radius:999px;padding:12px 26px;font-weight:700;font-size:14px;cursor:pointer;" onClick="{{ saveTryOn }}">{{ saveLabel }}</button>
+              <button style="background:transparent;border:1px solid rgba(var(--accent-rgb),0.4);color:var(--accent);border-radius:999px;padding:12px 22px;font-weight:600;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;" onClick="{{ openVideoModal }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>Generate Video · from ₦500</button>
             </div>
             <div style="display:flex;justify-content:center;align-items:center;gap:10px;margin-top:18px;">
-              <span style="color:#8a8478;font-size:12.5px;">Share this look:</span>
+              <span style="color:var(--text-3);font-size:12.5px;">Share this look:</span>
               <button aria-label="Share to Facebook" style="width:34px;height:34px;border-radius:50%;border:none;background:#1877F2;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;" onClick="{{ shareToFacebook }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="#fff"><path d="M22 12a10 10 0 10-11.5 9.9v-7H7.9V12h2.6V9.8c0-2.6 1.5-4 3.9-4 1.1 0 2.3.2 2.3.2v2.5h-1.3c-1.3 0-1.7.8-1.7 1.6V12h2.9l-.5 2.9h-2.4v7A10 10 0 0022 12z"/></svg></button>
               <button aria-label="Share to Instagram" style="width:34px;height:34px;border-radius:50%;border:none;background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;" onClick="{{ shareToInstagram }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.3" cy="6.7" r="1" fill="#fff" stroke="none"/></svg></button>
               <button aria-label="Share to X" style="width:34px;height:34px;border-radius:50%;border:none;background:#000;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;" onClick="{{ shareToX }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="#fff"><path d="M18.9 3H21l-6.6 7.5L22 21h-6.4l-5-6.5L4.7 21H2.5l7-8-7.4-10H9l4.6 6 5.3-6z"/></svg></button>
@@ -685,37 +840,367 @@
     </section>
   </sc-if>
 
+
+  <!-- FABRIC STUDIO VIEW -->
+  <sc-if value="{{ isFabricStudio }}" hint-placeholder-val="{{ false }}">
+    <section style="padding:56px 48px 100px;max-width:1280px;margin:0 auto;">
+      <div style="text-align:center;margin-bottom:30px;">
+        <div style="display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(var(--accent-rgb),0.4);color:var(--accent);font-size:12px;letter-spacing:1.5px;padding:7px 14px;border-radius:999px;margin-bottom:18px;">
+          <span style="width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block;"></span>FABRIC STUDIO
+        </div>
+        <h1 style="font-family:'Playfair Display',serif;font-size:38px;font-weight:600;margin:0 0 12px;">Design It In <span style="color:var(--accent);font-style:italic;">Your Fabric</span></h1>
+        <p style="color:var(--text-2);font-size:15px;margin:0 auto;max-width:560px;">Pick your photo, choose a fabric, choose a style — and see the outfit made from that exact cloth, on you.</p>
+      </div>
+
+      <sc-if value="{{ fsMockMode }}" hint-placeholder-val="{{ false }}">
+        <div style="max-width:760px;margin:0 auto 24px;background:rgba(var(--accent-rgb),0.1);border:1px solid rgba(var(--accent-rgb),0.3);border-radius:12px;padding:11px 14px;font-size:12.5px;color:var(--accent);text-align:center;">Development mode — designs are simulated locally and no AI credits are used.</div>
+      </sc-if>
+
+      <div style="display:flex;align-items:center;justify-content:center;margin-bottom:38px;flex-wrap:wrap;gap:4px;">
+        <sc-for list="{{ fsSteps }}" as="st" hint-placeholder-count="6">
+          <div style="display:flex;align-items:center;">
+            <div style="display:flex;align-items:center;gap:7px;padding:8px 14px;border-radius:999px;background:{{ st.bg }};cursor:{{ st.cursor }};" onClick="{{ st.go }}">
+              <div style="width:19px;height:19px;border-radius:50%;background:{{ st.numBg }};color:{{ st.numColor }};font-size:10.5px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">{{ st.n }}</div>
+              <span style="font-size:12.5px;font-weight:600;color:{{ st.textColor }};white-space:nowrap;">{{ st.label }}</span>
+            </div>
+            <sc-if value="{{ st.showLine }}" hint-placeholder-val="{{ true }}">
+              <div style="width:22px;height:1px;background:rgba(var(--border-rgb),0.15);margin:0 4px;"></div>
+            </sc-if>
+          </div>
+        </sc-for>
+      </div>
+
+      <sc-if value="{{ fsHasError }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;align-items:flex-start;gap:10px;background:var(--danger-bg);border:1px solid var(--danger-border);border-radius:12px;padding:14px 16px;margin:0 auto 22px;max-width:760px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2" style="flex-shrink:0;margin-top:2px;"><circle cx="12" cy="12" r="10"/><path d="M12 8v5M12 16h.01"/></svg>
+          <div style="font-size:13.5px;color:var(--danger-text);line-height:1.5;">{{ fsError }}</div>
+        </div>
+      </sc-if>
+
+      <!-- STEP 1 — YOUR PHOTO -->
+      <div style="display:{{ fsStep1Display }};max-width:900px;margin:0 auto;">
+        <div style="text-align:center;margin-bottom:22px;">
+          <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:600;margin-bottom:6px;">Choose Your Photo</div>
+          <div style="color:var(--text-3);font-size:14px;">A full-length photo, facing the camera, in even light.</div>
+        </div>
+        <div class="vt-grid-2" style="display:grid;grid-template-columns:minmax(0,1.2fr) minmax(260px,.8fr);gap:22px;align-items:start;">
+          <div class="vt-photo-box" style="border:1px dashed rgba(var(--border-rgb),0.18);border-radius:16px;height:500px;overflow:hidden;background:var(--well);position:relative;display:flex;align-items:center;justify-content:center;" onDragOver="{{ onPhotoDragOver }}" onDrop="{{ fsPhotoDrop }}">
+            <sc-if value="{{ fsHasPhoto }}" hint-placeholder-val="{{ false }}">
+              <img src="{{ fsPersonPhoto }}" alt="Your photo" style="max-width:100%;max-height:100%;object-fit:contain;display:block;">
+              <button style="position:absolute;top:12px;right:12px;background:rgba(0,0,0,0.6);color:var(--on-scrim);border:1px solid rgba(var(--border-rgb),0.15);border-radius:999px;padding:8px 14px;font-size:12.5px;cursor:pointer;" onClick="{{ fsClearPhoto }}">Replace</button>
+            </sc-if>
+            <sc-if value="{{ fsHasNoPhoto }}" hint-placeholder-val="{{ true }}">
+              <label style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;cursor:pointer;gap:12px;color:var(--text-3);text-align:center;padding:24px;box-sizing:border-box;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="1.6"><path d="M12 3v12M7 8l5-5 5 5M5 21h14"/></svg>
+                <div style="font-size:14px;max-width:320px;">Upload your photo — or reuse the one from your last try-on</div>
+                <div style="font-size:11.5px;color:var(--text-4);">Click to browse, or drag and drop</div>
+                <input type="file" accept="image/*" onChange="{{ fsPhotoFileChange }}" style="display:none;">
+              </label>
+            </sc-if>
+          </div>
+          <div style="background:var(--surface);border:1px solid rgba(var(--border-rgb),0.07);border-radius:16px;padding:22px;">
+            <div style="font-family:'Playfair Display',serif;font-size:19px;font-weight:600;margin-bottom:12px;">For the best result</div>
+            <div style="color:var(--text-2);font-size:13.5px;line-height:1.9;margin-bottom:18px;">
+              · Stand facing the camera<br>
+              · Full body in frame, head to feet<br>
+              · Even, bright light — no strong shadows<br>
+              · Fitted clothing works better than bulky layers
+            </div>
+            <sc-if value="{{ fsHasPhotoWarnings }}" hint-placeholder-val="{{ false }}">
+              <div style="border:1px solid rgba(var(--accent-rgb),0.25);background:rgba(var(--accent-rgb),0.07);border-radius:12px;padding:12px 14px;margin-bottom:16px;">
+                <sc-for list="{{ fsPhotoWarnings }}" as="w" hint-placeholder-count="1">
+                  <div style="font-size:12.5px;color:var(--accent);line-height:1.5;">{{ w.text }}</div>
+                </sc-for>
+              </div>
+            </sc-if>
+            <sc-if value="{{ fsHasReusablePhoto }}" hint-placeholder-val="{{ false }}">
+              <button style="width:100%;background:var(--surface-3);color:var(--text);border:1px solid rgba(var(--border-rgb),0.1);border-radius:999px;padding:12px 18px;font-weight:600;font-size:13.5px;cursor:pointer;margin-bottom:10px;" onClick="{{ fsUsePreviousPhoto }}">Use my try-on photo</button>
+            </sc-if>
+            <button style="width:100%;background:{{ fsStep1Bg }};color:{{ fsStep1Color }};border:none;border-radius:999px;padding:14px 20px;font-weight:700;font-size:14.5px;cursor:{{ fsStep1Cursor }};" onClick="{{ fsToFabrics }}">Choose Your Fabric</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 2 — FABRIC -->
+      <div style="display:{{ fsStep2Display }};">
+        <div style="text-align:center;margin-bottom:22px;">
+          <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:600;margin-bottom:6px;">Choose Your Fabric</div>
+          <div style="color:var(--text-3);font-size:14px;">{{ fsFabricCount }} fabrics in the catalogue.</div>
+        </div>
+        <div class="vt-catalog-layout" style="display:grid;grid-template-columns:230px 1fr;gap:32px;align-items:start;">
+          <div class="vt-catalog-sidebar" style="background:var(--surface);border:1px solid rgba(var(--border-rgb),0.07);border-radius:14px;padding:20px;position:sticky;top:100px;">
+            <input type="text" value="{{ fsFabricSearch }}" onChange="{{ fsSetFabricSearch }}" placeholder="Search fabrics..." style="width:100%;box-sizing:border-box;background:var(--surface-2);border:1px solid rgba(var(--border-rgb),0.1);color:var(--text);border-radius:9px;padding:10px 12px;font-size:13px;margin-bottom:20px;" />
+            <div style="font-size:11px;letter-spacing:1px;color:var(--text-3);margin-bottom:10px;">CATEGORY</div>
+            <div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:20px;">
+              <sc-for list="{{ fsCategoryPills }}" as="p" hint-placeholder-count="6">
+                <div style="padding:6px 12px;border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;background:{{ p.bg }};color:{{ p.color }};" onClick="{{ p.select }}">{{ p.label }}</div>
+              </sc-for>
+            </div>
+            <div style="font-size:11px;letter-spacing:1px;color:var(--text-3);margin-bottom:10px;">PATTERN</div>
+            <div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:20px;">
+              <sc-for list="{{ fsPatternPills }}" as="p" hint-placeholder-count="5">
+                <div style="padding:6px 12px;border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;background:{{ p.bg }};color:{{ p.color }};" onClick="{{ p.select }}">{{ p.label }}</div>
+              </sc-for>
+            </div>
+            <div style="font-size:11px;letter-spacing:1px;color:var(--text-3);margin-bottom:10px;">COLOUR</div>
+            <div style="display:flex;flex-wrap:wrap;gap:7px;">
+              <sc-for list="{{ fsColorPills }}" as="p" hint-placeholder-count="6">
+                <div style="padding:6px 12px;border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;background:{{ p.bg }};color:{{ p.color }};" onClick="{{ p.select }}">{{ p.label }}</div>
+              </sc-for>
+            </div>
+          </div>
+          <div>
+            <sc-if value="{{ fsFabricsLoading }}" hint-placeholder-val="{{ false }}">
+              <div style="text-align:center;padding:60px 0;color:var(--text-3);font-size:13.5px;">Loading fabrics…</div>
+            </sc-if>
+            <sc-if value="{{ fsFabricsEmpty }}" hint-placeholder-val="{{ false }}">
+              <div style="text-align:center;padding:60px 20px;color:var(--text-3);font-size:13.5px;border:1px dashed rgba(var(--border-rgb),0.12);border-radius:16px;">No fabrics match those filters yet.</div>
+            </sc-if>
+            <div class="vt-grid-3" style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;">
+              <sc-for list="{{ fsFabrics }}" as="f" hint-placeholder-count="9">
+                <div style="background:var(--surface);border:1px solid {{ f.borderColor }};border-radius:14px;overflow:hidden;">
+                  <div style="height:190px;background:var(--surface-2);position:relative;cursor:pointer;" onClick="{{ f.select }}">
+                    <img src="{{ f.thumbnailUrl }}" alt="{{ f.name }}" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block;">
+                    <sc-if value="{{ f.isSelected }}" hint-placeholder-val="{{ false }}">
+                      <div style="position:absolute;inset:0;border:2.5px solid var(--accent);border-radius:13px 13px 0 0;pointer-events:none;"></div>
+                      <div style="position:absolute;bottom:10px;right:10px;width:26px;height:26px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-sm);">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--on-accent)" stroke-width="3"><path d="M5 12.5l4.5 4.5L19 7"/></svg>
+                      </div>
+                    </sc-if>
+                  </div>
+                  <div style="padding:14px;">
+                    <div style="font-weight:600;font-size:14.5px;margin-bottom:3px;">{{ f.name }}</div>
+                    <div style="font-size:11.5px;color:var(--text-3);margin-bottom:9px;">{{ f.metaLine }}</div>
+                    <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px;">
+                      <sc-for list="{{ f.swatches }}" as="sw" hint-placeholder-count="3">
+                        <span style="width:14px;height:14px;border-radius:50%;border:1px solid rgba(var(--border-rgb),0.2);display:inline-block;background:{{ sw.hex }};"></span>
+                      </sc-for>
+                      <span style="font-size:11px;color:var(--text-4);">{{ f.colorLine }}</span>
+                    </div>
+                    <button style="width:100%;background:{{ f.buttonBg }};color:{{ f.buttonColor }};border:1px solid {{ f.buttonBorder }};border-radius:999px;padding:9px 14px;font-weight:600;font-size:12.5px;cursor:pointer;" onClick="{{ f.select }}">{{ f.buttonLabel }}</button>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+            <div style="display:flex;justify-content:center;gap:12px;margin-top:32px;flex-wrap:wrap;">
+              <button style="background:transparent;border:1px solid rgba(var(--border-rgb),0.15);color:var(--text);border-radius:999px;padding:12px 22px;font-size:14px;cursor:pointer;" onClick="{{ fsToPhoto }}">Back</button>
+              <button style="background:{{ fsStep2Bg }};color:{{ fsStep2Color }};border:none;border-radius:999px;padding:13px 28px;font-weight:700;font-size:14px;cursor:{{ fsStep2Cursor }};" onClick="{{ fsToOutfits }}">Choose Your Outfit</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 3 — OUTFIT -->
+      <div style="display:{{ fsStep3Display }};max-width:1100px;margin:0 auto;">
+        <div style="text-align:center;margin-bottom:22px;">
+          <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:600;margin-bottom:6px;">Choose Your Outfit</div>
+          <div style="color:var(--text-3);font-size:14px;">Every style is cut from the fabric you picked.</div>
+        </div>
+        <div style="display:flex;justify-content:center;flex-wrap:wrap;gap:8px;margin-bottom:26px;">
+          <sc-for list="{{ fsOutfitPills }}" as="p" hint-placeholder-count="3">
+            <div style="padding:8px 18px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;background:{{ p.bg }};color:{{ p.color }};" onClick="{{ p.select }}">{{ p.label }}</div>
+          </sc-for>
+        </div>
+        <div class="vt-grid-4" style="display:grid;grid-template-columns:repeat(4,1fr);gap:20px;">
+          <sc-for list="{{ fsOutfits }}" as="o" hint-placeholder-count="8">
+            <div style="background:var(--surface);border:1px solid {{ o.borderColor }};border-radius:14px;overflow:hidden;">
+              <div style="height:240px;background:#f7f6f3;position:relative;cursor:pointer;" onClick="{{ o.select }}">
+                <img src="{{ o.previewImageUrl }}" alt="{{ o.name }}" loading="lazy" style="width:100%;height:100%;object-fit:contain;display:block;">
+                <sc-if value="{{ o.isSelected }}" hint-placeholder-val="{{ false }}">
+                  <div style="position:absolute;inset:0;border:2.5px solid var(--accent);border-radius:13px 13px 0 0;pointer-events:none;"></div>
+                  <div style="position:absolute;bottom:10px;right:10px;width:26px;height:26px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-sm);">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--on-accent)" stroke-width="3"><path d="M5 12.5l4.5 4.5L19 7"/></svg>
+                  </div>
+                </sc-if>
+              </div>
+              <div style="padding:14px;">
+                <div style="font-weight:600;font-size:14.5px;margin-bottom:3px;">{{ o.name }}</div>
+                <div style="font-size:11.5px;color:var(--text-3);margin-bottom:12px;">{{ o.category }}</div>
+                <button style="width:100%;background:{{ o.buttonBg }};color:{{ o.buttonColor }};border:1px solid {{ o.buttonBorder }};border-radius:999px;padding:9px 14px;font-weight:600;font-size:12.5px;cursor:pointer;" onClick="{{ o.select }}">{{ o.buttonLabel }}</button>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display:flex;justify-content:center;gap:12px;margin-top:32px;flex-wrap:wrap;">
+          <button style="background:transparent;border:1px solid rgba(var(--border-rgb),0.15);color:var(--text);border-radius:999px;padding:12px 22px;font-size:14px;cursor:pointer;" onClick="{{ fsToFabrics }}">Back</button>
+          <button style="background:{{ fsStep3Bg }};color:{{ fsStep3Color }};border:none;border-radius:999px;padding:13px 28px;font-weight:700;font-size:14px;cursor:{{ fsStep3Cursor }};" onClick="{{ fsToPreview }}">Preview My Design</button>
+        </div>
+      </div>
+
+      <!-- STEP 4 — PREVIEW -->
+      <div style="display:{{ fsStep4Display }};max-width:1000px;margin:0 auto;">
+        <div style="text-align:center;margin-bottom:26px;">
+          <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:600;margin-bottom:6px;">Your Design</div>
+          <div style="color:var(--text-3);font-size:14px;">Check the combination, then generate your look.</div>
+        </div>
+        <div class="vt-grid-2" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,.9fr);gap:22px;align-items:start;">
+          <div style="background:var(--surface);border:1px solid rgba(var(--border-rgb),0.07);border-radius:16px;padding:18px;">
+            <div style="height:420px;border-radius:12px;overflow:hidden;background:#f7f6f3;display:flex;align-items:center;justify-content:center;">
+              <sc-if value="{{ fsHasPreview }}" hint-placeholder-val="{{ false }}">
+                <img src="{{ fsPreviewUrl }}" alt="Your outfit in the selected fabric" style="width:100%;height:100%;object-fit:contain;display:block;">
+              </sc-if>
+              <sc-if value="{{ fsPreviewLoading }}" hint-placeholder-val="{{ true }}">
+                <div style="text-align:center;color:var(--text-3);font-size:13px;">
+                  <div style="width:36px;height:36px;border-radius:50%;border:3px solid rgba(var(--accent-rgb),0.2);border-top-color:var(--accent);margin:0 auto 14px;animation:vt-spin 1s linear infinite;"></div>
+                  Cutting your outfit…
+                </div>
+              </sc-if>
+            </div>
+            <div style="color:var(--text-4);font-size:11.5px;text-align:center;margin-top:12px;">This is the garment we build from your fabric before fitting it to your photo.</div>
+          </div>
+          <div style="background:var(--surface);border:1px solid rgba(var(--border-rgb),0.07);border-radius:16px;padding:22px;">
+            <div style="display:flex;gap:14px;align-items:center;margin-bottom:16px;">
+              <div style="width:56px;height:56px;border-radius:10px;overflow:hidden;border:1px solid rgba(var(--border-rgb),0.1);flex-shrink:0;background:var(--surface-2);">
+                <img src="{{ fsSelectedFabricThumb }}" alt="{{ fsSelectedFabricName }}" style="width:100%;height:100%;object-fit:cover;display:block;">
+              </div>
+              <div style="min-width:0;">
+                <div style="font-size:10.5px;letter-spacing:1.4px;color:var(--accent);margin-bottom:3px;">FABRIC</div>
+                <div style="font-weight:600;font-size:14.5px;">{{ fsSelectedFabricName }}</div>
+                <div style="font-size:11.5px;color:var(--text-3);">{{ fsSelectedFabricMeta }}</div>
+              </div>
+            </div>
+            <div style="display:flex;gap:14px;align-items:center;margin-bottom:20px;">
+              <div style="width:56px;height:56px;border-radius:10px;overflow:hidden;border:1px solid rgba(var(--border-rgb),0.1);flex-shrink:0;background:#f7f6f3;">
+                <img src="{{ fsSelectedOutfitPreview }}" alt="{{ fsSelectedOutfitName }}" style="width:100%;height:100%;object-fit:contain;display:block;">
+              </div>
+              <div style="min-width:0;">
+                <div style="font-size:10.5px;letter-spacing:1.4px;color:var(--accent);margin-bottom:3px;">OUTFIT</div>
+                <div style="font-weight:600;font-size:14.5px;">{{ fsSelectedOutfitName }}</div>
+                <div style="font-size:11.5px;color:var(--text-3);">{{ fsSelectedOutfitCategory }}</div>
+              </div>
+            </div>
+
+            <div style="font-size:11px;letter-spacing:1px;color:var(--text-3);margin-bottom:10px;">GENERATION MODE</div>
+            <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
+              <sc-for list="{{ fsModeOptions }}" as="m" hint-placeholder-count="2">
+                <div style="border:1px solid {{ m.border }};background:{{ m.bg }};border-radius:12px;padding:12px 14px;cursor:pointer;" onClick="{{ m.select }}">
+                  <div style="font-weight:600;font-size:13.5px;color:{{ m.titleColor }};margin-bottom:3px;">{{ m.name }}</div>
+                  <div style="font-size:11.5px;color:var(--text-3);line-height:1.45;">{{ m.description }}</div>
+                </div>
+              </sc-for>
+            </div>
+            <sc-if value="{{ fsIsDesignMode }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-bottom:16px;">
+                <label style="display:block;font-size:11.5px;color:var(--text-3);margin-bottom:6px;">Describe the details you want</label>
+                <input type="text" value="{{ fsPrompt }}" onChange="{{ fsSetPrompt }}" placeholder="e.g. mandarin collar with subtle chest embroidery" style="width:100%;box-sizing:border-box;background:var(--surface-2);border:1px solid rgba(var(--border-rgb),0.1);color:var(--text);border-radius:10px;padding:11px 13px;font-size:13.5px;outline:none;">
+              </div>
+            </sc-if>
+
+            <div style="display:flex;flex-direction:column;gap:10px;">
+              <button style="background:linear-gradient(180deg,var(--cta-from),var(--cta-to));color:var(--on-accent);border:none;border-radius:999px;padding:14px 20px;font-weight:700;font-size:14.5px;cursor:pointer;" onClick="{{ fsGenerate }}">Generate Outfit</button>
+              <button style="background:var(--surface-3);color:var(--text);border:1px solid rgba(var(--border-rgb),0.1);border-radius:999px;padding:12px 18px;font-weight:600;font-size:13.5px;cursor:pointer;" onClick="{{ fsToOutfits }}">Change Outfit</button>
+              <button style="background:transparent;color:var(--text-2);border:1px solid rgba(var(--border-rgb),0.1);border-radius:999px;padding:12px 18px;font-size:13px;cursor:pointer;" onClick="{{ fsToFabrics }}">Change Fabric</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 5 — GENERATING -->
+      <div style="display:{{ fsStep5Display }};">
+        <div style="text-align:center;padding:80px 0;">
+          <div style="width:64px;height:64px;border-radius:50%;border:3px solid rgba(var(--accent-rgb),0.2);border-top-color:var(--accent);margin:0 auto 26px;animation:vt-spin 1s linear infinite;"></div>
+          <div style="font-weight:600;font-size:18px;margin-bottom:10px;">{{ fsStageLabel }}</div>
+          <div style="color:var(--text-3);font-size:13.5px;max-width:400px;margin:0 auto;">{{ fsSummaryLine }}</div>
+          <div style="color:var(--text-4);font-size:12.5px;margin-top:14px;">This usually takes under a minute — please keep this page open.</div>
+        </div>
+      </div>
+
+      <!-- STEP 6 — RESULT -->
+      <div style="display:{{ fsStep6Display }};max-width:1000px;margin:0 auto;">
+        <div style="text-align:center;margin-bottom:8px;">
+          <div style="font-family:'Playfair Display',serif;font-size:24px;font-weight:600;">Your Look</div>
+          <div style="color:var(--text-3);font-size:14px;margin-top:6px;">{{ fsSummaryLine }}</div>
+        </div>
+        <div class="vt-grid-2" style="display:grid;grid-template-columns:1fr 1fr;gap:18px;max-width:760px;margin:26px auto 30px;">
+          <div style="border-radius:18px;overflow:hidden;position:relative;background:var(--well);border:1px solid rgba(var(--border-rgb),0.08);box-shadow:var(--shadow-card);">
+            <img src="{{ fsPersonPhoto }}" alt="Your original photo" style="width:100%;aspect-ratio:3/4;object-fit:cover;object-position:center top;display:block;">
+            <div style="position:absolute;bottom:12px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.72);color:var(--on-scrim);font-size:11px;font-weight:700;letter-spacing:1px;padding:6px 16px;border-radius:999px;">BEFORE</div>
+          </div>
+          <div style="border-radius:18px;overflow:hidden;position:relative;background:var(--well);border:1px solid rgba(var(--accent-rgb),0.35);box-shadow:var(--shadow-card);">
+            <img src="{{ fsResultUrl }}" alt="Your generated outfit" style="width:100%;aspect-ratio:3/4;object-fit:cover;object-position:center top;display:block;">
+            <div style="position:absolute;top:12px;left:12px;background:rgba(var(--accent-rgb),0.92);color:var(--on-accent);font-size:10.5px;font-weight:700;padding:4px 10px;border-radius:999px;">FABRIC STUDIO</div>
+            <div style="position:absolute;bottom:12px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.72);color:var(--on-scrim);font-size:11px;font-weight:700;letter-spacing:1px;padding:6px 16px;border-radius:999px;">AFTER</div>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap;">
+          <button style="background:linear-gradient(180deg,var(--cta-from),var(--cta-to));color:var(--on-accent);border:none;border-radius:999px;padding:12px 26px;font-weight:700;font-size:14px;cursor:pointer;" onClick="{{ fsDownload }}">Download</button>
+          <button style="background:var(--surface-3);border:1px solid rgba(var(--border-rgb),0.1);color:var(--text);border-radius:999px;padding:12px 22px;font-size:14px;cursor:pointer;" onClick="{{ fsShare }}">Share</button>
+          <button style="background:transparent;border:1px solid rgba(var(--border-rgb),0.15);color:var(--text);border-radius:999px;padding:12px 22px;font-size:14px;cursor:pointer;" onClick="{{ fsTryAnotherFabric }}">Try Another Fabric</button>
+          <button style="background:transparent;border:1px solid rgba(var(--border-rgb),0.15);color:var(--text);border-radius:999px;padding:12px 22px;font-size:14px;cursor:pointer;" onClick="{{ fsTryAnotherOutfit }}">Try Another Outfit</button>
+          <button style="background:transparent;border:1px solid rgba(var(--accent-rgb),0.4);color:var(--accent);border-radius:999px;padding:12px 22px;font-weight:600;font-size:14px;cursor:pointer;" onClick="{{ fsGenerateAgain }}">Generate Again</button>
+        </div>
+        <div style="text-align:center;margin-top:18px;">
+          <span style="color:var(--text-3);font-size:12.5px;cursor:pointer;text-decoration:underline;" onClick="{{ goMyDesigns }}">See all my designs</span>
+        </div>
+      </div>
+    </section>
+  </sc-if>
+
+  <!-- MY DESIGNS VIEW -->
+  <sc-if value="{{ isMyDesigns }}" hint-placeholder-val="{{ false }}">
+    <section style="padding:60px 48px 100px;max-width:1280px;margin:0 auto;">
+      <div style="color:var(--accent);font-size:12px;letter-spacing:2px;margin-bottom:10px;">FABRIC STUDIO</div>
+      <h2 style="font-family:'Playfair Display',serif;font-size:32px;font-weight:600;margin:0 0 26px;">My Designs</h2>
+      <sc-if value="{{ fsHasNoDesigns }}" hint-placeholder-val="{{ true }}">
+        <div style="text-align:center;padding:70px 20px;border:1px dashed rgba(var(--border-rgb),0.12);border-radius:16px;">
+          <div style="color:var(--text-3);font-size:14.5px;margin-bottom:20px;">You haven't designed anything yet.</div>
+          <button style="background:linear-gradient(180deg,var(--cta-from),var(--cta-to));color:var(--on-accent);border:none;border-radius:999px;padding:13px 26px;font-weight:700;font-size:14px;cursor:pointer;" onClick="{{ goFabricStudio }}">Open Fabric Studio</button>
+        </div>
+      </sc-if>
+      <div class="vt-grid-4" style="display:grid;grid-template-columns:repeat(4,1fr);gap:20px;">
+        <sc-for list="{{ fsDesigns }}" as="d" hint-placeholder-count="4">
+          <div style="background:var(--surface);border:1px solid rgba(var(--border-rgb),0.07);border-radius:14px;overflow:hidden;">
+            <div style="height:280px;background:var(--well);position:relative;">
+              <img src="{{ d.resultImageUrl }}" alt="{{ d.title }}" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block;">
+              <div style="position:absolute;top:10px;left:10px;background:{{ d.badgeBg }};color:{{ d.badgeColor }};font-size:10px;font-weight:700;padding:4px 9px;border-radius:999px;">{{ d.badgeLabel }}</div>
+            </div>
+            <div style="padding:14px;">
+              <div style="font-weight:600;font-size:14px;margin-bottom:3px;">{{ d.outfitName }}</div>
+              <div style="font-size:11.5px;color:var(--text-3);margin-bottom:12px;">{{ d.fabricName }}</div>
+              <div style="display:flex;gap:8px;">
+                <button style="flex:1;background:var(--surface-3);border:1px solid rgba(var(--border-rgb),0.1);color:var(--text);border-radius:999px;padding:8px 12px;font-size:12px;cursor:pointer;" onClick="{{ d.download }}">Download</button>
+                <button style="flex:1;background:var(--surface-3);border:1px solid rgba(var(--border-rgb),0.1);color:var(--text);border-radius:999px;padding:8px 12px;font-size:12px;cursor:pointer;" onClick="{{ d.share }}">Share</button>
+              </div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+  </sc-if>
+
   <!-- FOOTER -->
-  <footer style="border-top:1px solid rgba(255,255,255,0.07);padding:56px 48px 28px;">
+  <footer style="border-top:1px solid rgba(var(--border-rgb),0.07);padding:56px 48px 28px;">
     <div class="vt-footer-grid" style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:40px;max-width:1400px;margin:0 auto 40px;">
       <div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
-          <img src="assets/bb-logo-mark.png" alt="BB Apparel" style="height:30px;width:auto;display:block;">
+          <span style="background:var(--logo-tile);padding:var(--logo-tile-pad);border-radius:10px;display:inline-flex;align-items:center;justify-content:center;">
+            <img src="assets/bb-logo-mark.png" alt="BB Apparel" style="height:26px;width:auto;display:block;">
+          </span>
           <div style="font-family:'Playfair Display',serif;font-weight:600;font-size:14px;">BB APPAREL</div>
         </div>
-        <p style="color:#8a8478;font-size:13.5px;line-height:1.6;max-width:340px;">Upload your photo and virtually try on any style from our collection. Find your perfect look before you buy — powered by AI.</p>
+        <p style="color:var(--text-3);font-size:13.5px;line-height:1.6;max-width:340px;">Upload your photo and virtually try on any style from our collection. Find your perfect look before you buy — powered by AI.</p>
       </div>
       <div>
         <div style="font-weight:600;font-size:13.5px;margin-bottom:16px;">Explore</div>
-        <div style="display:flex;flex-direction:column;gap:11px;font-size:13.5px;color:#8a8478;">
-          <a href="#" onClick="{{ goCatalog }}" style="color:#8a8478;text-decoration:none;">Catalog</a>
-          <a href="#" onClick="{{ openTryOnFresh }}" style="color:#8a8478;text-decoration:none;">Virtual Try-On</a>
-          <a href="#" onClick="{{ goSize }}" style="color:#8a8478;text-decoration:none;">Size Finder</a>
-          <a href="#" onClick="{{ goSaved }}" style="color:#8a8478;text-decoration:none;">My Try-Ons</a>
+        <div style="display:flex;flex-direction:column;gap:11px;font-size:13.5px;color:var(--text-3);">
+          <a href="#" onClick="{{ goCatalog }}" style="color:var(--text-3);text-decoration:none;">Catalog</a>
+          <a href="#" onClick="{{ openTryOnFresh }}" style="color:var(--text-3);text-decoration:none;">Virtual Try-On</a>
+          <a href="#" onClick="{{ goSize }}" style="color:var(--text-3);text-decoration:none;">Size Finder</a>
+          <a href="#" onClick="{{ goSaved }}" style="color:var(--text-3);text-decoration:none;">My Try-Ons</a>
         </div>
       </div>
       <div>
         <div style="font-weight:600;font-size:13.5px;margin-bottom:16px;">Company</div>
-        <div style="display:flex;flex-direction:column;gap:11px;font-size:13.5px;color:#8a8478;">
-          <a href="#" style="color:#8a8478;text-decoration:none;">About Us</a>
-          <a href="#" style="color:#8a8478;text-decoration:none;">Contact</a>
-          <a href="#" style="color:#8a8478;text-decoration:none;">Privacy Policy</a>
-          <a href="#" style="color:#8a8478;text-decoration:none;">Terms of Service</a>
-          <a href="./admin.html" style="color:#8a8478;text-decoration:none;">Admin</a>
+        <div style="display:flex;flex-direction:column;gap:11px;font-size:13.5px;color:var(--text-3);">
+          <a href="#" style="color:var(--text-3);text-decoration:none;">About Us</a>
+          <a href="#" style="color:var(--text-3);text-decoration:none;">Contact</a>
+          <a href="#" style="color:var(--text-3);text-decoration:none;">Privacy Policy</a>
+          <a href="#" style="color:var(--text-3);text-decoration:none;">Terms of Service</a>
+          <a href="./admin.html" style="color:var(--text-3);text-decoration:none;">Admin</a>
         </div>
       </div>
     </div>
-    <div class="vt-footer-bottom" style="border-top:1px solid rgba(255,255,255,0.06);padding-top:22px;display:flex;justify-content:space-between;max-width:1400px;margin:0 auto;font-size:12px;color:#6f6a5f;gap:8px;flex-wrap:wrap;">
+    <div class="vt-footer-bottom" style="border-top:1px solid rgba(var(--border-rgb),0.06);padding-top:22px;display:flex;justify-content:space-between;max-width:1400px;margin:0 auto;font-size:12px;color:var(--text-4);gap:8px;flex-wrap:wrap;">
       <div>© 2026 BB APPAREL. All rights reserved.</div>
       <div>Powered by AI Virtual Try-On Technology</div>
     </div>
@@ -796,6 +1281,39 @@ async function runFashnTryOn(modelImage, productImage) {
   throw new Error('Timed out waiting for the AI result — please try again.');
 }
 
+// ---------------------------------------------------------------- Fabric Studio
+// Person + fabric + predefined outfit. The heavy lifting (fabric analysis,
+// garment composition, provider calls) all happens server-side; the browser
+// only picks, polls and displays.
+const FABRIC_STUDIO_MODES = [
+  { id: 'fast', name: 'Fast Fabric Try-On', description: 'Your fabric applied to a tailored outfit template. Fastest, cheapest, and most faithful to the cloth.' },
+  { id: 'design', name: 'AI Design', description: 'Adds a design brief so the studio can restyle details like collars and embroidery.' },
+];
+
+function bbClientId() {
+  try {
+    let id = window.localStorage.getItem('bbClientId');
+    if (!id || !/^[A-Za-z0-9_-]{6,64}$/.test(id)) {
+      id = 'c' + Math.random().toString(36).slice(2, 12) + Date.now().toString(36);
+      window.localStorage.setItem('bbClientId', id);
+    }
+    return id;
+  } catch (err) {
+    return 'anonymous';
+  }
+}
+
+async function studioFetch(path, options) {
+  const opts = Object.assign({}, options || {});
+  opts.headers = Object.assign({ 'X-BB-Client-Id': bbClientId() }, opts.headers || {});
+  const res = await fetch(path, opts);
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(json.message || 'Something went wrong. Please try again.');
+  }
+  return json;
+}
+
 class Component extends DCLogic {
   state = {
     view: 'home',
@@ -828,11 +1346,50 @@ class Component extends DCLogic {
     videoErrorMsg: null,
     videoResultUrl: null,
     videoReference: null,
+
+    // --- Fabric Studio ---
+    fsStep: 1,
+    fsLoaded: false,
+    fsConfig: null,
+    fsPersonPhoto: null,
+    fsPhotoWarnings: [],
+    fsFabrics: [],
+    fsFabricTotal: 0,
+    fsFacets: null,
+    fsFabricsLoading: false,
+    fsFabricSearch: '',
+    fsFabricCategory: 'All',
+    fsFabricPattern: 'All',
+    fsFabricColor: 'All',
+    fsSelectedFabric: null,
+    fsOutfits: [],
+    fsOutfitCategories: [],
+    fsOutfitCategory: 'All',
+    fsSelectedOutfit: null,
+    fsPreviewUrl: null,
+    fsPreviewLoading: false,
+    fsMode: 'fast',
+    fsPrompt: '',
+    fsGenerationId: null,
+    fsStage: null,
+    fsStageLabel: '',
+    fsResultUrl: null,
+    fsError: null,
+    fsDesigns: [],
+    theme: 'cream',
+
+    // --- hero trust row (live catalogue counts) ---
+    heroFabricTotal: 0,
+    heroOutfitTotal: 0,
   };
 
   componentDidMount() {
+    this.setState({ theme: document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'cream' });
+    this.heroLoad();
+    this.setupHeroVideo();
     this._prevView = this.state.view;
     this._prevStep = this.state.step;
+    this._prevFsStep = this.state.fsStep;
 
     const sharedParam = new URLSearchParams(window.location.search).get('shared');
     if (sharedParam) {
@@ -878,16 +1435,20 @@ class Component extends DCLogic {
   }
 
   componentDidUpdate() {
-    if (this._prevView !== this.state.view || this._prevStep !== this.state.step) {
+    if (this._prevView !== this.state.view || this._prevStep !== this.state.step
+        || this._prevFsStep !== this.state.fsStep) {
       window.scrollTo(0, 0);
     }
     this._prevView = this.state.view;
     this._prevStep = this.state.step;
+    this._prevFsStep = this.state.fsStep;
   }
 
   componentWillUnmount() {
     window.removeEventListener('beforeinstallprompt', this.onBeforeInstallPrompt);
     clearTimeout(this._shareToastTimer);
+    clearTimeout(this._fsPollTimer);
+    clearTimeout(this._fsSearchTimer);
   }
 
   onBeforeInstallPrompt = (e) => {
@@ -911,6 +1472,15 @@ class Component extends DCLogic {
   };
 
   dismissInstallBanner = () => this.setState({ showInstallBanner: false });
+
+  toggleTheme = () => {
+    const next = this.state.theme === 'dark' ? 'cream' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    const meta = document.getElementById('theme-color-meta');
+    if (meta) meta.setAttribute('content', next === 'dark' ? '#0F0D0B' : '#F6F2EA');
+    try { window.localStorage.setItem('bbTheme', next); } catch (err) { /* private mode */ }
+    this.setState({ theme: next });
+  };
 
   setCatalogSearch = (e) => this.setState({ catalogSearch: e.target.value });
   setCatalogCategory = (v) => this.setState({ catalogCategory: v });
@@ -1265,26 +1835,291 @@ class Component extends DCLogic {
     this.setState({ sizeResult: { jacket, pants } });
   };
 
+  // ----------------------------------------------------------------- hero
+  setupHeroVideo = () => {
+    const video = document.getElementById('hero-video');
+    if (!video) return;
+    const reduceMotion = window.matchMedia
+      && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduceMotion) {
+      // Leave the poster frame up and let the visitor start it themselves.
+      video.removeAttribute('autoplay');
+      video.controls = true;
+      video.pause();
+      return;
+    }
+    video.muted = true;
+    video.defaultMuted = true;
+    const attempt = video.play();
+    if (attempt && attempt.catch) {
+      // Autoplay refused (data saver, low power mode): fall back to controls
+      // over the poster rather than a frozen black rectangle.
+      attempt.catch(() => { video.controls = true; });
+    }
+  };
+
+  // The hero's trust row quotes live catalogue sizes rather than fixed copy.
+  heroLoad = async () => {
+    try {
+      const [fabrics, outfits] = await Promise.all([
+        studioFetch('/api/fabrics?limit=1'),
+        studioFetch('/api/outfits'),
+      ]);
+      this.setState({
+        heroFabricTotal: fabrics.total || 0,
+        heroOutfitTotal: (outfits.items || []).length,
+      });
+    } catch (err) {
+      // The hero must still render if the catalogue is unavailable.
+    }
+  };
+
+  // ------------------------------------------------------------ Fabric Studio
+  goFabricStudio = () => {
+    this.setState({ view: 'fabricstudio', mobileMenuOpen: false, fsError: null });
+    this.fsEnsureLoaded();
+  };
+
+  goMyDesigns = () => {
+    this.setState({ view: 'mydesigns', mobileMenuOpen: false });
+    this.fsLoadDesigns();
+  };
+
+  fsEnsureLoaded = () => {
+    if (this.state.fsLoaded) return;
+    this.setState({ fsLoaded: true });
+    studioFetch('/api/fabric-studio/config')
+      .then(config => this.setState({ fsConfig: config }))
+      .catch(() => {});
+    this.fsLoadFabrics();
+    this.fsLoadOutfits();
+  };
+
+  fsLoadFabrics = async () => {
+    this.setState({ fsFabricsLoading: true });
+    const s = this.state;
+    const params = new URLSearchParams({ limit: '60' });
+    if (s.fsFabricSearch.trim()) params.set('search', s.fsFabricSearch.trim());
+    if (s.fsFabricCategory !== 'All') params.set('category', s.fsFabricCategory);
+    if (s.fsFabricPattern !== 'All') params.set('pattern', s.fsFabricPattern);
+    if (s.fsFabricColor !== 'All') params.set('color', s.fsFabricColor);
+    try {
+      const data = await studioFetch('/api/fabrics?' + params.toString());
+      this.setState({
+        fsFabrics: data.items || [],
+        fsFabricTotal: data.total || 0,
+        fsFacets: data.facets || this.state.fsFacets,
+        fsFabricsLoading: false,
+      });
+    } catch (err) {
+      this.setState({ fsFabricsLoading: false, fsError: err.message });
+    }
+  };
+
+  fsLoadOutfits = async () => {
+    try {
+      const data = await studioFetch('/api/outfits');
+      this.setState({ fsOutfits: data.items || [], fsOutfitCategories: data.categories || [] });
+    } catch (err) {
+      this.setState({ fsError: err.message });
+    }
+  };
+
+  fsLoadDesigns = async () => {
+    try {
+      const data = await studioFetch('/api/fabric-studio/generations?limit=40');
+      this.setState({ fsDesigns: data.items || [] });
+    } catch (err) {
+      /* history is non-critical — leave the view empty rather than shouting */
+    }
+  };
+
+  fsSetPhoto = async (dataUrl) => {
+    this.setState({ fsPersonPhoto: dataUrl, fsPhotoWarnings: [], fsError: null });
+    try {
+      const report = await studioFetch('/api/fabric-studio/validate-photo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ personImage: dataUrl }),
+      });
+      this.setState({ fsPhotoWarnings: report.warnings || [] });
+    } catch (err) {
+      this.setState({ fsPersonPhoto: null, fsError: err.message });
+    }
+  };
+
+  fsLoadPhotoFile = (file) => {
+    if (!file || !file.type || !file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = () => this.fsSetPhoto(reader.result);
+    reader.readAsDataURL(file);
+  };
+  fsPhotoFileChange = (e) => {
+    const file = e.target.files && e.target.files[0];
+    this.fsLoadPhotoFile(file);
+    e.target.value = '';
+  };
+  fsPhotoDrop = (e) => {
+    e.preventDefault();
+    const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    this.fsLoadPhotoFile(file);
+  };
+  fsClearPhoto = () => this.setState({ fsPersonPhoto: null, fsPhotoWarnings: [] });
+  fsUsePreviousPhoto = () => {
+    if (this.state.userPhotoDataUrl) this.fsSetPhoto(this.state.userPhotoDataUrl);
+  };
+
+  fsGoStep = (step) => this.setState({ fsStep: step, fsError: null });
+  fsToPhoto = () => this.fsGoStep(1);
+  fsToFabrics = () => {
+    if (!this.state.fsPersonPhoto) {
+      this.setState({ fsError: 'Please add your photo to continue.' });
+      return;
+    }
+    this.fsGoStep(2);
+  };
+  fsToOutfits = () => {
+    if (!this.state.fsSelectedFabric) {
+      this.setState({ fsError: 'Please choose a fabric to continue.' });
+      return;
+    }
+    this.fsGoStep(3);
+  };
+  fsToPreview = () => {
+    if (!this.state.fsSelectedOutfit) {
+      this.setState({ fsError: 'Please choose an outfit to continue.' });
+      return;
+    }
+    this.fsGoStep(4);
+    this.fsLoadPreview();
+  };
+
+  fsSetFabricSearch = (e) => {
+    const value = e.target.value;
+    this.setState({ fsFabricSearch: value });
+    clearTimeout(this._fsSearchTimer);
+    this._fsSearchTimer = setTimeout(() => this.fsLoadFabrics(), 300);
+  };
+  fsSetFabricCategory = (value) => this.setState({ fsFabricCategory: value }, this.fsLoadFabrics);
+  fsSetFabricPattern = (value) => this.setState({ fsFabricPattern: value }, this.fsLoadFabrics);
+  fsSetFabricColor = (value) => this.setState({ fsFabricColor: value }, this.fsLoadFabrics);
+  fsSetOutfitCategory = (value) => this.setState({ fsOutfitCategory: value });
+
+  fsSelectFabric = (fabric) => {
+    this.setState({ fsSelectedFabric: fabric, fsPreviewUrl: null, fsError: null });
+  };
+  fsSelectOutfit = (outfit) => {
+    this.setState({ fsSelectedOutfit: outfit, fsPreviewUrl: null, fsError: null });
+  };
+  fsSetMode = (mode) => this.setState({ fsMode: mode });
+  fsSetPrompt = (e) => this.setState({ fsPrompt: e.target.value });
+
+  fsLoadPreview = async () => {
+    const { fsSelectedFabric, fsSelectedOutfit } = this.state;
+    if (!fsSelectedFabric || !fsSelectedOutfit) return;
+    this.setState({ fsPreviewLoading: true, fsPreviewUrl: null });
+    try {
+      const params = new URLSearchParams({ fabricId: fsSelectedFabric.id, outfitId: fsSelectedOutfit.id });
+      const data = await studioFetch('/api/fabric-studio/preview?' + params.toString());
+      this.setState({ fsPreviewUrl: data.garmentImageUrl, fsPreviewLoading: false });
+    } catch (err) {
+      this.setState({ fsPreviewLoading: false, fsError: err.message });
+    }
+  };
+
+  fsGenerate = async () => {
+    const { fsPersonPhoto, fsSelectedFabric, fsSelectedOutfit, fsMode, fsPrompt } = this.state;
+    if (!fsPersonPhoto || !fsSelectedFabric || !fsSelectedOutfit) return;
+    this.setState({ fsStep: 5, fsError: null, fsResultUrl: null, fsStageLabel: 'Getting ready…' });
+    try {
+      const started = await studioFetch('/api/fabric-studio/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          personImage: fsPersonPhoto,
+          fabricId: fsSelectedFabric.id,
+          outfitId: fsSelectedOutfit.id,
+          mode: fsMode,
+          prompt: fsMode === 'design' ? fsPrompt : '',
+        }),
+      });
+      this.setState({
+        fsGenerationId: started.generationId,
+        fsStage: started.stage,
+        fsStageLabel: started.stageLabel || 'Working…',
+      });
+      this.fsPoll();
+    } catch (err) {
+      this.setState({ fsStep: 4, fsError: err.message });
+    }
+  };
+
+  fsPoll = () => {
+    clearTimeout(this._fsPollTimer);
+    this._fsPollTimer = setTimeout(async () => {
+      const id = this.state.fsGenerationId;
+      if (!id) return;
+      try {
+        const status = await studioFetch('/api/fabric-studio/generations/' + id);
+        // The stage comes from the server's real pipeline position — no
+        // invented progress percentages.
+        this.setState({ fsStage: status.stage, fsStageLabel: status.stageLabel || '' });
+        if (status.status === 'completed') {
+          this.setState({ fsStep: 6, fsResultUrl: status.resultImageUrl });
+          this.fsLoadDesigns();
+          return;
+        }
+        if (status.status === 'failed') {
+          this.setState({ fsStep: 4, fsError: status.error || "We couldn't generate your outfit this time. Please try again." });
+          return;
+        }
+        this.fsPoll();
+      } catch (err) {
+        this.setState({ fsStep: 4, fsError: err.message });
+      }
+    }, 1800);
+  };
+
+  fsDownload = () => {
+    const name = this.fsDesignName();
+    this.downloadImage(this.state.fsResultUrl, name);
+  };
+  fsShare = () => this.shareResultImage(this.state.fsResultUrl, this.fsDesignName());
+  fsDesignName = () => {
+    const { fsSelectedFabric, fsSelectedOutfit } = this.state;
+    if (!fsSelectedFabric || !fsSelectedOutfit) return 'fabric-studio-design';
+    return fsSelectedOutfit.name + ' in ' + fsSelectedFabric.name;
+  };
+
+  // Change one variable without restarting the workflow.
+  fsTryAnotherFabric = () => this.setState({ fsStep: 2, fsResultUrl: null, fsPreviewUrl: null, fsError: null });
+  fsTryAnotherOutfit = () => this.setState({ fsStep: 3, fsResultUrl: null, fsPreviewUrl: null, fsError: null });
+  fsGenerateAgain = () => this.fsGenerate();
+
   renderVals() {
     const s = this.state;
     const navBg = {
-      home: s.view === 'home' ? 'rgba(201,167,105,0.14)' : 'transparent',
-      catalog: s.view === 'catalog' ? 'rgba(201,167,105,0.14)' : 'transparent',
-      size: s.view === 'sizefinder' ? 'rgba(201,167,105,0.14)' : 'transparent',
-      tryon: s.view === 'tryon' ? 'rgba(201,167,105,0.14)' : 'transparent',
-      saved: s.view === 'mytryons' ? 'rgba(201,167,105,0.14)' : 'transparent',
+      home: s.view === 'home' ? 'rgba(var(--accent-rgb),0.14)' : 'transparent',
+      catalog: s.view === 'catalog' ? 'rgba(var(--accent-rgb),0.14)' : 'transparent',
+      size: s.view === 'sizefinder' ? 'rgba(var(--accent-rgb),0.14)' : 'transparent',
+      tryon: s.view === 'tryon' ? 'rgba(var(--accent-rgb),0.14)' : 'transparent',
+      studio: s.view === 'fabricstudio' ? 'rgba(var(--accent-rgb),0.14)' : 'transparent',
+      designs: s.view === 'mydesigns' ? 'rgba(var(--accent-rgb),0.14)' : 'transparent',
+      saved: s.view === 'mytryons' ? 'rgba(var(--accent-rgb),0.14)' : 'transparent',
     };
     const navColor = {
-      home: s.view === 'home' ? '#c9a769' : '#c7c1b4',
-      catalog: s.view === 'catalog' ? '#c9a769' : '#c7c1b4',
-      size: s.view === 'sizefinder' ? '#c9a769' : '#c7c1b4',
-      tryon: s.view === 'tryon' ? '#c9a769' : '#c7c1b4',
-      saved: s.view === 'mytryons' ? '#c9a769' : '#c7c1b4',
+      home: s.view === 'home' ? 'var(--accent)' : 'var(--nav-text)',
+      catalog: s.view === 'catalog' ? 'var(--accent)' : 'var(--nav-text)',
+      size: s.view === 'sizefinder' ? 'var(--accent)' : 'var(--nav-text)',
+      tryon: s.view === 'tryon' ? 'var(--accent)' : 'var(--nav-text)',
+      studio: s.view === 'fabricstudio' ? 'var(--accent)' : 'var(--nav-text)',
+      designs: s.view === 'mydesigns' ? 'var(--accent)' : 'var(--nav-text)',
+      saved: s.view === 'mytryons' ? 'var(--accent)' : 'var(--nav-text)',
     };
 
     const suits = RAW_SUITS.map(suit => ({
       ...suit,
-      pickBorder: s.selectedSuitId === suit.id ? '#c9a769' : 'transparent',
+      pickBorder: s.selectedSuitId === suit.id ? 'var(--accent)' : 'transparent',
       pick: () => this.pickSuit(suit.id),
       tryOn: () => this.tryOnSuit(suit.id),
     }));
@@ -1292,7 +2127,7 @@ class Component extends DCLogic {
     const selectedSuit = RAW_SUITS.find(x => x.id === s.selectedSuitId);
 
     const pillStyle = (label, active) => ({
-      label, bg: active ? '#c9a769' : '#1b1a17', color: active ? '#211a0e' : '#a39c8e',
+      label, bg: active ? 'var(--accent)' : 'var(--surface-2)', color: active ? 'var(--on-accent)' : 'var(--text-2)',
     });
     const categoryPills = ['All', ...CATEGORIES].map(c => ({ ...pillStyle(c, s.catalogCategory === c), select: () => this.setCatalogCategory(c) }));
     const fitPills = ['All', ...FIT_TYPES].map(f => ({ ...pillStyle(f, s.catalogFit === f), select: () => this.setCatalogFit(f) }));
@@ -1314,9 +2149,9 @@ class Component extends DCLogic {
     const fitOptions = ['Slim Fit','Modern Fit','Classic Fit'].map(label => ({
       label,
       select: () => this.pickFit(label),
-      bg: s.sizeForm.fit === label ? 'rgba(201,167,105,0.14)' : '#1b1a17',
-      color: s.sizeForm.fit === label ? '#c9a769' : '#a39c8e',
-      border: s.sizeForm.fit === label ? '#c9a769' : 'rgba(255,255,255,0.08)',
+      bg: s.sizeForm.fit === label ? 'rgba(var(--accent-rgb),0.14)' : 'var(--surface-2)',
+      color: s.sizeForm.fit === label ? 'var(--accent)' : 'var(--text-2)',
+      border: s.sizeForm.fit === label ? 'var(--accent)' : 'rgba(var(--border-rgb),0.08)',
     }));
 
     const stepLabels = ['Your Photo','Your Look'];
@@ -1325,14 +2160,109 @@ class Component extends DCLogic {
       const done = s.step > n;
       return {
         n, label: stepLabels[n - 1], showLine: n < 2,
-        bg: active ? '#c9a769' : (done ? 'rgba(201,167,105,0.14)' : '#1b1a17'),
-        numBg: active ? '#211a0e' : (done ? '#c9a769' : 'rgba(255,255,255,0.12)'),
-        numColor: active ? '#c9a769' : (done ? '#211a0e' : '#8a8478'),
-        textColor: active ? '#211a0e' : (done ? '#c9a769' : '#8a8478'),
+        bg: active ? 'var(--accent)' : (done ? 'rgba(var(--accent-rgb),0.14)' : 'var(--surface-2)'),
+        numBg: active ? 'var(--on-accent)' : (done ? 'var(--accent)' : 'rgba(var(--border-rgb),0.12)'),
+        numColor: active ? 'var(--accent)' : (done ? 'var(--on-accent)' : 'var(--text-3)'),
+        textColor: active ? 'var(--on-accent)' : (done ? 'var(--accent)' : 'var(--text-3)'),
       };
     });
 
     const sharePopupSuit = RAW_SUITS.find(x => x.id === s.sharePopupSuitId);
+
+    // ---------------------------------------------------------- Fabric Studio
+    const fsStepLabels = ['Photo', 'Fabric', 'Outfit', 'Preview', 'Generate', 'Result'];
+    const fsSteps = [1, 2, 3, 4, 5, 6].map(n => {
+      const active = s.fsStep === n;
+      const done = s.fsStep > n;
+      // Steps 1-4 are re-entrable; you cannot click back into a running job.
+      const clickable = n < s.fsStep && n <= 4 && s.fsStep !== 5;
+      return {
+        n, label: fsStepLabels[n - 1], showLine: n < 6,
+        bg: active ? 'var(--accent)' : (done ? 'rgba(var(--accent-rgb),0.14)' : 'var(--surface-2)'),
+        numBg: active ? 'var(--on-accent)' : (done ? 'var(--accent)' : 'rgba(var(--border-rgb),0.12)'),
+        numColor: active ? 'var(--accent)' : (done ? 'var(--on-accent)' : 'var(--text-3)'),
+        textColor: active ? 'var(--on-accent)' : (done ? 'var(--accent)' : 'var(--text-3)'),
+        cursor: clickable ? 'pointer' : 'default',
+        go: clickable ? (() => this.fsGoStep(n)) : (() => {}),
+      };
+    });
+
+    const facets = s.fsFacets || {};
+    const pill = (label, active, select) => ({
+      label, select,
+      bg: active ? 'var(--accent)' : 'var(--surface-2)',
+      color: active ? 'var(--on-accent)' : 'var(--text-2)',
+    });
+    const facetValues = (list) => (list || []).map(item => item.value).filter(Boolean);
+    const fsCategoryPills = ['All'].concat(facetValues(facets.categories))
+      .map(v => pill(v, s.fsFabricCategory === v, () => this.fsSetFabricCategory(v)));
+    const fsPatternPills = ['All'].concat(facetValues(facets.patterns))
+      .map(v => pill(v, s.fsFabricPattern === v, () => this.fsSetFabricPattern(v)));
+    const fsColorPills = ['All'].concat(facetValues(facets.colors))
+      .map(v => pill(v, s.fsFabricColor === v, () => this.fsSetFabricColor(v)));
+
+    const selectedFabricId = s.fsSelectedFabric ? s.fsSelectedFabric.id : null;
+    const fsFabrics = (s.fsFabrics || []).map(fabric => {
+      const isSelected = fabric.id === selectedFabricId;
+      return Object.assign({}, fabric, {
+        isSelected,
+        borderColor: isSelected ? 'var(--accent)' : 'rgba(var(--border-rgb),0.07)',
+        metaLine: [fabric.category, fabric.patternType].filter(Boolean).join(' · '),
+        colorLine: (fabric.primaryColors || []).slice(0, 2).join(', '),
+        swatches: (fabric.colorSwatches || []).filter(Boolean).map(hex => ({ hex })),
+        buttonLabel: isSelected ? 'Selected ✓' : 'Select Fabric',
+        buttonBg: isSelected ? 'var(--accent)' : 'var(--surface-3)',
+        buttonColor: isSelected ? 'var(--on-accent)' : 'var(--text)',
+        buttonBorder: isSelected ? 'var(--accent)' : 'rgba(var(--border-rgb),0.1)',
+        select: () => this.fsSelectFabric(fabric),
+      });
+    });
+
+    const selectedOutfitId = s.fsSelectedOutfit ? s.fsSelectedOutfit.id : null;
+    const fsOutfits = (s.fsOutfits || [])
+      .filter(outfit => s.fsOutfitCategory === 'All' || outfit.category === s.fsOutfitCategory)
+      .map(outfit => {
+        const isSelected = outfit.id === selectedOutfitId;
+        return Object.assign({}, outfit, {
+          isSelected,
+          borderColor: isSelected ? 'var(--accent)' : 'rgba(var(--border-rgb),0.07)',
+          buttonLabel: isSelected ? 'Selected ✓' : 'Select Outfit',
+          buttonBg: isSelected ? 'var(--accent)' : 'var(--surface-3)',
+          buttonColor: isSelected ? 'var(--on-accent)' : 'var(--text)',
+          buttonBorder: isSelected ? 'var(--accent)' : 'rgba(var(--border-rgb),0.1)',
+          select: () => this.fsSelectOutfit(outfit),
+        });
+      });
+    const fsOutfitPills = ['All'].concat(s.fsOutfitCategories || [])
+      .map(v => pill(v, s.fsOutfitCategory === v, () => this.fsSetOutfitCategory(v)));
+
+    const modeList = (s.fsConfig && s.fsConfig.modes) || FABRIC_STUDIO_MODES;
+    const fsModeOptions = modeList.map(mode => {
+      const active = s.fsMode === mode.id;
+      return {
+        name: mode.name, description: mode.description,
+        bg: active ? 'rgba(var(--accent-rgb),0.1)' : 'var(--surface-2)',
+        border: active ? 'var(--accent)' : 'rgba(var(--border-rgb),0.08)',
+        titleColor: active ? 'var(--accent)' : 'var(--text)',
+        select: () => this.fsSetMode(mode.id),
+      };
+    });
+
+    const fsSummaryLine = (s.fsSelectedFabric && s.fsSelectedOutfit)
+      ? (s.fsSelectedOutfit.name + ' in ' + s.fsSelectedFabric.name)
+      : '';
+
+    const fsDesigns = (s.fsDesigns || []).filter(d => d.resultImageUrl).map(design => ({
+      resultImageUrl: design.resultImageUrl,
+      outfitName: design.outfitName || 'Design',
+      fabricName: design.fabricName || '',
+      title: (design.outfitName || '') + ' in ' + (design.fabricName || ''),
+      badgeLabel: design.mode === 'design' ? 'AI DESIGN' : 'FABRIC STUDIO',
+      badgeBg: 'rgba(var(--accent-rgb),0.9)',
+      badgeColor: 'var(--on-accent)',
+      download: () => this.downloadImage(design.resultImageUrl, (design.outfitName || 'design') + ' in ' + (design.fabricName || 'fabric')),
+      share: () => this.shareResultImage(design.resultImageUrl, (design.outfitName || 'design') + ' in ' + (design.fabricName || 'fabric')),
+    }));
 
     return {
       hasSharePopup: !!sharePopupSuit,
@@ -1357,12 +2287,12 @@ class Component extends DCLogic {
       videoErrorMsg: s.videoErrorMsg,
       videoEmail: s.videoEmail,
       setVideoEmail: this.setVideoEmail,
-      video5Bg: s.videoDuration === '5' ? '#c9a769' : '#1b1a17',
-      video5Color: s.videoDuration === '5' ? '#211a0e' : '#f2ede4',
-      video5Border: s.videoDuration === '5' ? '#c9a769' : 'rgba(255,255,255,0.12)',
-      video10Bg: s.videoDuration === '10' ? '#c9a769' : '#1b1a17',
-      video10Color: s.videoDuration === '10' ? '#211a0e' : '#f2ede4',
-      video10Border: s.videoDuration === '10' ? '#c9a769' : 'rgba(255,255,255,0.12)',
+      video5Bg: s.videoDuration === '5' ? 'var(--accent)' : 'var(--surface-2)',
+      video5Color: s.videoDuration === '5' ? 'var(--on-accent)' : 'var(--text)',
+      video5Border: s.videoDuration === '5' ? 'var(--accent)' : 'rgba(var(--border-rgb),0.12)',
+      video10Bg: s.videoDuration === '10' ? 'var(--accent)' : 'var(--surface-2)',
+      video10Color: s.videoDuration === '10' ? 'var(--on-accent)' : 'var(--text)',
+      video10Border: s.videoDuration === '10' ? 'var(--accent)' : 'rgba(var(--border-rgb),0.12)',
       videoPriceNaira: (VIDEO_PRICE_KOBO[s.videoDuration] || VIDEO_PRICE_KOBO['5']) / 100,
       paymentTestMode: s.paymentTestMode,
       videoPayButtonLabel: s.paymentTestMode ? 'Generate Video (Test Mode)' : `Pay ₦${(VIDEO_PRICE_KOBO[s.videoDuration] || VIDEO_PRICE_KOBO['5']) / 100} & Generate`,
@@ -1402,7 +2332,8 @@ class Component extends DCLogic {
       sizeForm: s.sizeForm,
       sizeResult: s.sizeResult,
       sizeWarning: !this.hasEnoughInfo(),
-      findSizeBg: this.hasEnoughInfo() ? 'linear-gradient(180deg,#d8b878,#b5904f)' : 'rgba(201,167,105,0.35)',
+      findSizeBg: this.hasEnoughInfo() ? 'linear-gradient(180deg,var(--cta-from),var(--cta-to))' : 'var(--surface-3)',
+      findSizeColor: this.hasEnoughInfo() ? 'var(--on-accent)' : 'var(--text-4)',
       setField: {
         heightFt: this.setField('heightFt'), heightIn: this.setField('heightIn'),
         weight: this.setField('weight'), chest: this.setField('chest'),
@@ -1426,9 +2357,11 @@ class Component extends DCLogic {
       onPhotoDrop: this.onPhotoDrop,
       onPhotoDragOver: this.onPhotoDragOver,
       clearUserPhoto: this.clearUserPhoto,
-      step1ContinueBg: (s.userPhotoDataUrl && selectedSuit) ? 'linear-gradient(180deg,#d8b878,#b5904f)' : 'rgba(255,255,255,0.1)',
+      step1ContinueBg: (s.userPhotoDataUrl && selectedSuit) ? 'linear-gradient(180deg,var(--cta-from),var(--cta-to))' : 'var(--surface-3)',
+      step1ContinueColor: (s.userPhotoDataUrl && selectedSuit) ? 'var(--on-accent)' : 'var(--text-4)',
       step1ContinueCursor: (s.userPhotoDataUrl && selectedSuit) ? 'pointer' : 'not-allowed',
-      continueBg: s.selectedSuitId ? 'linear-gradient(180deg,#d8b878,#b5904f)' : 'rgba(255,255,255,0.1)',
+      continueBg: s.selectedSuitId ? 'linear-gradient(180deg,var(--cta-from),var(--cta-to))' : 'var(--surface-3)',
+      continueColor: s.selectedSuitId ? 'var(--on-accent)' : 'var(--text-4)',
       continueCursor: s.selectedSuitId ? 'pointer' : 'not-allowed',
       hasTryOnError: !!s.tryOnError,
       tryOnError: s.tryOnError,
@@ -1451,6 +2384,82 @@ class Component extends DCLogic {
       shareToWhatsApp: () => this.shareResultImage(s.resultImageUrl, selectedSuit ? selectedSuit.name : null),
       addToCart: this.addToCart,
       cartLabel: s.cart.some(t => t.suit.id === s.selectedSuitId) ? 'Added to Cart ✓' : 'Add to Cart',
+      isFabricStudio: s.view === 'fabricstudio',
+      isMyDesigns: s.view === 'mydesigns',
+      goFabricStudio: this.goFabricStudio,
+      goMyDesigns: this.goMyDesigns,
+      fsSteps,
+      fsMockMode: !!(s.fsConfig && s.fsConfig.mockMode),
+      fsHasError: !!s.fsError,
+      fsError: s.fsError,
+      fsStep1Display: s.fsStep === 1 ? 'block' : 'none',
+      fsStep2Display: s.fsStep === 2 ? 'block' : 'none',
+      fsStep3Display: s.fsStep === 3 ? 'block' : 'none',
+      fsStep4Display: s.fsStep === 4 ? 'block' : 'none',
+      fsStep5Display: s.fsStep === 5 ? 'block' : 'none',
+      fsStep6Display: s.fsStep === 6 ? 'block' : 'none',
+      fsPersonPhoto: s.fsPersonPhoto,
+      fsHasPhoto: !!s.fsPersonPhoto,
+      fsHasNoPhoto: !s.fsPersonPhoto,
+      fsPhotoFileChange: this.fsPhotoFileChange,
+      fsPhotoDrop: this.fsPhotoDrop,
+      fsClearPhoto: this.fsClearPhoto,
+      fsUsePreviousPhoto: this.fsUsePreviousPhoto,
+      fsHasReusablePhoto: !!s.userPhotoDataUrl && !s.fsPersonPhoto,
+      fsHasPhotoWarnings: (s.fsPhotoWarnings || []).length > 0,
+      fsPhotoWarnings: (s.fsPhotoWarnings || []).map(text => ({ text })),
+      fsStep1Bg: s.fsPersonPhoto ? 'linear-gradient(180deg,var(--cta-from),var(--cta-to))' : 'var(--surface-3)',
+      fsStep1Color: s.fsPersonPhoto ? 'var(--on-accent)' : 'var(--text-4)',
+      fsStep1Cursor: s.fsPersonPhoto ? 'pointer' : 'not-allowed',
+      fsStep2Bg: s.fsSelectedFabric ? 'linear-gradient(180deg,var(--cta-from),var(--cta-to))' : 'var(--surface-3)',
+      fsStep2Color: s.fsSelectedFabric ? 'var(--on-accent)' : 'var(--text-4)',
+      fsStep2Cursor: s.fsSelectedFabric ? 'pointer' : 'not-allowed',
+      fsStep3Bg: s.fsSelectedOutfit ? 'linear-gradient(180deg,var(--cta-from),var(--cta-to))' : 'var(--surface-3)',
+      fsStep3Color: s.fsSelectedOutfit ? 'var(--on-accent)' : 'var(--text-4)',
+      fsStep3Cursor: s.fsSelectedOutfit ? 'pointer' : 'not-allowed',
+      fsToPhoto: this.fsToPhoto,
+      fsToFabrics: this.fsToFabrics,
+      fsToOutfits: this.fsToOutfits,
+      fsToPreview: this.fsToPreview,
+      fsFabrics,
+      fsFabricCount: s.fsFabricTotal,
+      fsFabricsLoading: s.fsFabricsLoading,
+      fsFabricsEmpty: !s.fsFabricsLoading && fsFabrics.length === 0,
+      fsFabricSearch: s.fsFabricSearch,
+      fsSetFabricSearch: this.fsSetFabricSearch,
+      fsCategoryPills, fsPatternPills, fsColorPills,
+      fsOutfits, fsOutfitPills,
+      fsSelectedFabricName: s.fsSelectedFabric ? s.fsSelectedFabric.name : '',
+      fsSelectedFabricThumb: s.fsSelectedFabric ? s.fsSelectedFabric.thumbnailUrl : '',
+      fsSelectedFabricMeta: s.fsSelectedFabric ? [s.fsSelectedFabric.category, s.fsSelectedFabric.patternType].filter(Boolean).join(' · ') : '',
+      fsSelectedOutfitName: s.fsSelectedOutfit ? s.fsSelectedOutfit.name : '',
+      fsSelectedOutfitPreview: s.fsSelectedOutfit ? s.fsSelectedOutfit.previewImageUrl : '',
+      fsSelectedOutfitCategory: s.fsSelectedOutfit ? s.fsSelectedOutfit.category : '',
+      fsPreviewUrl: s.fsPreviewUrl,
+      fsHasPreview: !!s.fsPreviewUrl,
+      fsPreviewLoading: s.fsPreviewLoading,
+      fsModeOptions,
+      fsIsDesignMode: s.fsMode === 'design',
+      fsPrompt: s.fsPrompt,
+      fsSetPrompt: this.fsSetPrompt,
+      fsGenerate: this.fsGenerate,
+      fsStageLabel: s.fsStageLabel,
+      fsSummaryLine,
+      fsResultUrl: s.fsResultUrl,
+      fsDownload: this.fsDownload,
+      fsShare: this.fsShare,
+      fsTryAnotherFabric: this.fsTryAnotherFabric,
+      fsTryAnotherOutfit: this.fsTryAnotherOutfit,
+      fsGenerateAgain: this.fsGenerateAgain,
+      fsDesigns,
+      fsHasNoDesigns: fsDesigns.length === 0,
+      heroFabricCount: s.heroFabricTotal || 0,
+      heroOutfitCount: s.heroOutfitTotal || 0,
+      themeIsDark: s.theme === 'dark',
+      themeIsLight: s.theme !== 'dark',
+      themeName: s.theme === 'dark' ? 'Dark' : 'Cream',
+      themeToggleLabel: s.theme === 'dark' ? 'Switch to cream mode' : 'Switch to dark mode',
+      toggleTheme: this.toggleTheme,
       showInstallBanner: s.showInstallBanner,
       isIosInstall: s.isIosInstall,
       isNotIosInstall: !s.isIosInstall,

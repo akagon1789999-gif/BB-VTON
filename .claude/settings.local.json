@@ -14,7 +14,9 @@
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
       "Bash(git push *)",
-      "Bash(grep -n '\\\\$' index.html)"
+      "Bash(grep -n '\\\\$' index.html)",
+      "Bash(railway whoami *)",
+      "mcp__claude-in-chrome__tabs_context_mcp"
     ]
   }
 }
