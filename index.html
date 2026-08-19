@@ -705,151 +705,15 @@
     </section>
   </sc-if>
 
-  <!-- VIRTUAL TRY-ON PAGE -->
-  <sc-if value="{{ isTryOn }}" hint-placeholder-val="{{ false }}">
-    <section style="padding:60px 24px 100px;max-width:1000px;margin:0 auto;">
-      <div style="text-align:center;margin-bottom:36px;">
-        <div style="color:var(--accent);font-size:12px;letter-spacing:2px;margin-bottom:10px;">AI-POWERED</div>
-        <h1 style="font-family:'Playfair Display',serif;font-size:38px;font-weight:600;margin:0 0 14px;">Virtual Try-On</h1>
-        <p style="color:var(--text-2);font-size:15px;margin:0;">Upload your photo and preview your selected style before generating your virtual try-on.</p>
-      </div>
-
-      <div style="display:flex;align-items:center;justify-content:center;margin-bottom:48px;flex-wrap:wrap;">
-        <sc-for list="{{ tryonSteps }}" as="st" hint-placeholder-count="2">
-          <div style="display:flex;align-items:center;">
-            <div style="display:flex;align-items:center;gap:8px;padding:9px 18px;border-radius:999px;background:{{ st.bg }};">
-              <div style="width:20px;height:20px;border-radius:50%;background:{{ st.numBg }};color:{{ st.numColor }};font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">{{ st.n }}</div>
-              <span style="font-size:13.5px;font-weight:600;color:{{ st.textColor }};white-space:nowrap;">{{ st.label }}</span>
-            </div>
-            <sc-if value="{{ st.showLine }}" hint-placeholder-val="{{ true }}">
-              <div style="width:36px;height:1px;background:rgba(var(--border-rgb),0.15);margin:0 8px;"></div>
-            </sc-if>
-          </div>
-        </sc-for>
-      </div>
-
-      <!-- STEP 1: PHOTO -->
-        <div style="max-width:880px;margin:0 auto;display:{{ step1Display }};">
-          <div style="text-align:center;margin-bottom:24px;">
-            <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:600;margin-bottom:6px;">Your Photo</div>
-            <div style="color:var(--text-3);font-size:14px;">Upload a full-body photo and confirm the style you want to try on.</div>
-          </div>
-          <sc-if value="{{ hasTryOnError }}" hint-placeholder-val="{{ false }}">
-            <div style="display:flex;align-items:flex-start;gap:10px;background:var(--danger-bg);border:1px solid var(--danger-border);border-radius:12px;padding:14px 16px;margin:0 auto 20px;max-width:760px;text-align:left;">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2" style="flex-shrink:0;margin-top:2px;"><circle cx="12" cy="12" r="10"/><path d="M12 8v5M12 16h.01"/></svg>
-              <div style="font-size:13.5px;color:var(--danger-text);line-height:1.5;">{{ tryOnError }}</div>
-            </div>
-          </sc-if>
-          <div class="vt-grid-2" style="display:grid;grid-template-columns:minmax(0,1.2fr) minmax(280px,.8fr);gap:22px;align-items:start;">
-            <div>
-              <div class="vt-photo-box" style="border:1px dashed rgba(var(--border-rgb),0.18);border-radius:16px;height:520px;overflow:hidden;background:var(--well);position:relative;display:flex;align-items:center;justify-content:center;" onDragOver="{{ onPhotoDragOver }}" onDrop="{{ onPhotoDrop }}">
-                <sc-if value="{{ hasUserPhoto }}" hint-placeholder-val="{{ false }}">
-                  <img src="{{ userPhotoDataUrl }}" alt="Your photo" style="max-width:100%;max-height:100%;object-fit:contain;display:block;">
-                  <button style="position:absolute;top:12px;right:12px;background:rgba(0,0,0,0.6);color:var(--on-scrim);border:1px solid rgba(var(--border-rgb),0.15);border-radius:999px;padding:8px 14px;font-size:12.5px;cursor:pointer;" onClick="{{ clearUserPhoto }}">Remove</button>
-                </sc-if>
-                <sc-if value="{{ hasNoUserPhoto }}" hint-placeholder-val="{{ true }}">
-                  <label style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;cursor:pointer;gap:12px;color:var(--text-3);text-align:center;padding:24px;box-sizing:border-box;">
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="1.6"><path d="M12 3v12M7 8l5-5 5 5M5 21h14"/></svg>
-                    <div style="font-size:14px;max-width:340px;">Upload Your Photo — stand facing the camera in a well-lit area</div>
-                    <div style="font-size:11.5px;color:var(--text-4);">Click to browse, or drag and drop</div>
-                    <input type="file" accept="image/*" onChange="{{ onPhotoFileChange }}" style="display:none;">
-                  </label>
-                </sc-if>
-              </div>
-            </div>
-            <div style="background:var(--surface);border:1px solid rgba(var(--border-rgb),0.07);border-radius:16px;padding:22px;">
-              <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;">
-                <div>
-                  <div style="font-family:'Playfair Display',serif;font-size:19px;font-weight:600;margin-bottom:4px;">Selected Style</div>
-                  <div style="color:var(--text-3);font-size:13px;">A small preview stays visible while you prepare your try-on.</div>
-                </div>
-                <div style="width:78px;height:98px;border-radius:12px;overflow:hidden;border:1px solid rgba(var(--border-rgb),0.08);background:var(--surface-2);flex-shrink:0;">
-                  <sc-if value="{{ hasSelectedSuit }}" hint-placeholder-val="{{ false }}">
-                    <image-slot id="{{ selectedSuitSlot }}" shape="rect" fit="contain" src="{{ selectedSuitImg }}"></image-slot>
-                  </sc-if>
-                  <sc-if value="{{ hasNoSelectedSuit }}" hint-placeholder-val="{{ true }}">
-                    <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,rgba(var(--border-rgb),0.04),rgba(var(--border-rgb),0.01));">
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--text-4)" stroke-width="1.7"><path d="M8 6h8l1.5 3H20v2h-1l-1 8.5a2 2 0 01-2 1.5H8a2 2 0 01-2-1.5L5 11H4V9h2.5L8 6z"/></svg>
-                    </div>
-                  </sc-if>
-                </div>
-              </div>
-              <sc-if value="{{ hasSelectedSuit }}" hint-placeholder-val="{{ false }}">
-                <div style="border:1px solid rgba(var(--accent-rgb),0.16);background:rgba(var(--accent-rgb),0.06);border-radius:14px;padding:16px;margin-bottom:16px;">
-                  <div style="font-size:11px;letter-spacing:1.4px;color:var(--accent);margin-bottom:8px;">READY TO TRY ON</div>
-                  <div style="font-weight:600;font-size:16px;margin-bottom:5px;">{{ selectedSuitName }}</div>
-                  <div style="font-size:12.5px;color:var(--text-3);margin-bottom:12px;">{{ selectedSuitBrand }} · {{ selectedSuitCategory }}</div>
-                  <div style="display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border-radius:999px;background:var(--surface-3);color:var(--accent);font-size:12px;font-weight:600;">{{ selectedSuitPrice }}</div>
-                </div>
-              </sc-if>
-              <sc-if value="{{ hasNoSelectedSuit }}" hint-placeholder-val="{{ true }}">
-                <div style="border:1px dashed rgba(var(--border-rgb),0.12);border-radius:14px;padding:18px;margin-bottom:16px;text-align:center;color:var(--text-3);font-size:13.5px;line-height:1.6;">
-                  Pick a style from the collection and it will appear here before you generate the try-on.
-                </div>
-              </sc-if>
-              <div style="display:flex;flex-direction:column;gap:10px;">
-                <button style="background:var(--surface-3);color:var(--text);border:1px solid rgba(var(--border-rgb),0.1);border-radius:999px;padding:13px 20px;font-weight:600;font-size:14px;cursor:pointer;" onClick="{{ goCatalog }}">{{ suitActionLabel }}</button>
-                <button style="background:{{ step1ContinueBg }};color:{{ step1ContinueColor }};border:none;border-radius:999px;padding:14px 20px;font-weight:700;font-size:14.5px;cursor:{{ step1ContinueCursor }};" onClick="{{ startLook }}">See My Look</button>
-              </div>
-          </div>
-        </div>
-        </div>
-
-      <!-- STEP 2: RESULT -->
-        <div style="display:{{ step2Display }};">
-          <div style="text-align:center;padding:80px 0;display:{{ processingDisplay }};">
-            <div style="width:64px;height:64px;border-radius:50%;border:3px solid rgba(var(--accent-rgb),0.2);border-top-color:var(--accent);margin:0 auto 26px;animation:vt-spin 1s linear infinite;"></div>
-            <div style="font-weight:600;font-size:17px;margin-bottom:8px;">Placing the suit on your photo…</div>
-            <div style="color:var(--text-3);font-size:13.5px;animation:vt-pulse 1.6s ease-in-out infinite;">Our AI is analyzing fit, lighting, and pose — this can take up to a couple of minutes</div>
-          </div>
-          <div style="display:{{ notProcessingDisplay }};">
-            <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:600;margin-bottom:6px;text-align:center;">Your Look</div>
-            <div style="color:var(--text-3);font-size:14px;margin-bottom:26px;text-align:center;">{{ selectedSuitName }}</div>
-            <div style="display:flex;gap:20px;justify-content:center;margin-bottom:30px;">
-              <div style="width:100%;max-width:320px;height:440px;border-radius:14px;overflow:hidden;position:relative;border:1px solid rgba(var(--border-rgb),0.08);background:var(--well);">
-                <img src="{{ resultImageUrl }}" alt="AI-generated try-on result" style="width:100%;height:100%;object-fit:contain;object-position:center top;display:block;">
-                <div style="position:absolute;top:12px;left:12px;background:rgba(var(--accent-rgb),0.9);color:var(--on-accent);font-size:10.5px;font-weight:700;padding:4px 10px;border-radius:999px;">AI TRY-ON</div>
-                <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(0deg,rgba(0,0,0,0.75),transparent);padding:14px;display:flex;align-items:center;gap:10px;color:var(--on-scrim);">
-                  <div style="width:44px;height:44px;border-radius:8px;overflow:hidden;border:1px solid rgba(var(--border-rgb),0.2);flex-shrink:0;">
-                    <image-slot id="{{ selectedSuitSlot }}" shape="rect" fit="contain" src="{{ selectedSuitImg }}"></image-slot>
-                  </div>
-                  <div>
-                    <div style="font-size:12.5px;font-weight:600;">{{ selectedSuitName }}</div>
-                    <div style="font-size:11.5px;color:var(--accent-on-scrim);">{{ selectedSuitPrice }}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap;">
-              <button style="background:transparent;border:1px solid rgba(var(--border-rgb),0.15);color:var(--text);border-radius:999px;padding:12px 22px;font-size:14px;cursor:pointer;" onClick="{{ toStep1 }}">Use Another Photo</button>
-              <button style="background:var(--surface-3);border:1px solid rgba(var(--border-rgb),0.1);color:var(--text);border-radius:999px;padding:12px 22px;font-size:14px;cursor:pointer;" onClick="{{ goCatalog }}">Choose Another Suit</button>
-              <button style="background:transparent;border:1px solid rgba(var(--border-rgb),0.15);color:var(--text);border-radius:999px;padding:12px 22px;font-size:14px;cursor:pointer;" onClick="{{ downloadImage }}">Download Image</button>
-              <button style="background:var(--surface-3);border:1px solid rgba(var(--border-rgb),0.1);color:var(--text);border-radius:999px;padding:12px 22px;font-weight:600;font-size:14px;cursor:pointer;" onClick="{{ addToCart }}">{{ cartLabel }}</button>
-              <button style="background:linear-gradient(180deg,var(--cta-from),var(--cta-to));color:var(--on-accent);border:none;border-radius:999px;padding:12px 26px;font-weight:700;font-size:14px;cursor:pointer;" onClick="{{ saveTryOn }}">{{ saveLabel }}</button>
-              <button style="background:transparent;border:1px solid rgba(var(--accent-rgb),0.4);color:var(--accent);border-radius:999px;padding:12px 22px;font-weight:600;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;" onClick="{{ openVideoModal }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>Generate Video · from ₦500</button>
-            </div>
-            <div style="display:flex;justify-content:center;align-items:center;gap:10px;margin-top:18px;">
-              <span style="color:var(--text-3);font-size:12.5px;">Share this look:</span>
-              <button aria-label="Share to Facebook" style="width:34px;height:34px;border-radius:50%;border:none;background:#1877F2;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;" onClick="{{ shareToFacebook }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="#fff"><path d="M22 12a10 10 0 10-11.5 9.9v-7H7.9V12h2.6V9.8c0-2.6 1.5-4 3.9-4 1.1 0 2.3.2 2.3.2v2.5h-1.3c-1.3 0-1.7.8-1.7 1.6V12h2.9l-.5 2.9h-2.4v7A10 10 0 0022 12z"/></svg></button>
-              <button aria-label="Share to Instagram" style="width:34px;height:34px;border-radius:50%;border:none;background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;" onClick="{{ shareToInstagram }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.3" cy="6.7" r="1" fill="#fff" stroke="none"/></svg></button>
-              <button aria-label="Share to X" style="width:34px;height:34px;border-radius:50%;border:none;background:#000;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;" onClick="{{ shareToX }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="#fff"><path d="M18.9 3H21l-6.6 7.5L22 21h-6.4l-5-6.5L4.7 21H2.5l7-8-7.4-10H9l4.6 6 5.3-6z"/></svg></button>
-              <button aria-label="Share to WhatsApp" style="width:34px;height:34px;border-radius:50%;border:none;background:#25D366;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;" onClick="{{ shareToWhatsApp }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M12 2a10 10 0 00-8.6 15L2 22l5.2-1.4A10 10 0 1012 2zm5.8 14.2c-.2.7-1.4 1.3-2 1.4-.5.1-1.1.1-1.8-.1-.4-.1-1-.3-1.7-.6-3-1.3-4.9-4.3-5.1-4.5-.1-.2-1.2-1.6-1.2-3.1s.8-2.2 1.1-2.5c.3-.3.6-.4.8-.4h.6c.2 0 .4 0 .6.5.2.5.7 1.8.8 1.9.1.2.1.3 0 .5-.1.2-.2.3-.3.5-.2.2-.3.3-.5.5-.2.2-.3.4-.1.7.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.4 2.5 1.5.3.1.5.1.7-.1.2-.2.7-.8.9-1.1.2-.3.4-.2.7-.1.3.1 1.7.8 2 .9.3.1.5.2.6.3.1.2.1.9-.1 1.6z"/></svg></button>
-            </div>
-          </div>
-        </div>
-    </section>
-  </sc-if>
-
-
-  <!-- FABRIC STUDIO VIEW -->
-  <sc-if value="{{ isFabricStudio }}" hint-placeholder-val="{{ false }}">
+  <!-- STUDIO — one flow, two entry points (Virtual Try-On / Fabric Studio) -->
+  <sc-if value="{{ isStudio }}" hint-placeholder-val="{{ false }}">
     <section style="padding:56px 48px 100px;max-width:1280px;margin:0 auto;">
       <div style="text-align:center;margin-bottom:30px;">
         <div style="display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(var(--accent-rgb),0.4);color:var(--accent);font-size:12px;letter-spacing:1.5px;padding:7px 14px;border-radius:999px;margin-bottom:18px;">
-          <span style="width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block;"></span>FABRIC STUDIO
+          <span style="width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block;"></span>{{ studioTitle }}
         </div>
-        <h1 style="font-family:'Playfair Display',serif;font-size:38px;font-weight:600;margin:0 0 12px;">Design It In <span style="color:var(--accent);font-style:italic;">Your Fabric</span></h1>
-        <p style="color:var(--text-2);font-size:15px;margin:0 auto;max-width:560px;">Pick your photo, choose a fabric, choose a style — and see the outfit made from that exact cloth, on you.</p>
+        <h1 style="font-family:'Playfair Display',serif;font-size:38px;font-weight:600;margin:0 0 12px;">{{ studioHeadline }} <span style="color:var(--accent);font-style:italic;">{{ studioHeadlineAccent }}</span></h1>
+        <p style="color:var(--text-2);font-size:15px;margin:0 auto;max-width:560px;">{{ studioIntro }}</p>
       </div>
 
       <sc-if value="{{ fsMockMode }}" hint-placeholder-val="{{ false }}">
@@ -916,7 +780,7 @@
             <sc-if value="{{ fsHasReusablePhoto }}" hint-placeholder-val="{{ false }}">
               <button style="width:100%;background:var(--surface-3);color:var(--text);border:1px solid rgba(var(--border-rgb),0.1);border-radius:999px;padding:12px 18px;font-weight:600;font-size:13.5px;cursor:pointer;margin-bottom:10px;" onClick="{{ fsUsePreviousPhoto }}">Use my try-on photo</button>
             </sc-if>
-            <button style="width:100%;background:{{ fsStep1Bg }};color:{{ fsStep1Color }};border:none;border-radius:999px;padding:14px 20px;font-weight:700;font-size:14.5px;cursor:{{ fsStep1Cursor }};" onClick="{{ fsToFabrics }}">Choose Your Fabric</button>
+            <button style="width:100%;background:{{ fsStep1Bg }};color:{{ fsStep1Color }};border:none;border-radius:999px;padding:14px 20px;font-weight:700;font-size:14.5px;cursor:{{ fsStep1Cursor }};" onClick="{{ fsNext }}">{{ fsStep1NextLabel }}</button>
           </div>
         </div>
       </div>
@@ -924,8 +788,8 @@
       <!-- STEP 2 — FABRIC -->
       <div style="display:{{ fsStep2Display }};">
         <div style="text-align:center;margin-bottom:22px;">
-          <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:600;margin-bottom:6px;">Choose Your Fabric</div>
-          <div style="color:var(--text-3);font-size:14px;">{{ fsFabricCount }} fabrics in the catalogue.</div>
+          <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:600;margin-bottom:6px;">{{ fsFabricStepTitle }}</div>
+          <div style="color:var(--text-3);font-size:14px;">{{ fsFabricStepHint }}</div>
         </div>
         <div class="vt-catalog-layout" style="display:grid;grid-template-columns:230px 1fr;gap:32px;align-items:start;">
           <div class="vt-catalog-sidebar" style="background:var(--surface);border:1px solid rgba(var(--border-rgb),0.07);border-radius:14px;padding:20px;position:sticky;top:100px;">
@@ -955,6 +819,17 @@
             </sc-if>
             <sc-if value="{{ fsFabricsEmpty }}" hint-placeholder-val="{{ false }}">
               <div style="text-align:center;padding:60px 20px;color:var(--text-3);font-size:13.5px;border:1px dashed rgba(var(--border-rgb),0.12);border-radius:16px;">No fabrics match those filters yet.</div>
+            </sc-if>
+            <sc-if value="{{ fsFabricOptional }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;align-items:center;gap:14px;border:1.5px solid {{ fsKeepFabricBorder }};border-radius:14px;padding:14px 18px;margin-bottom:12px;cursor:pointer;background:var(--surface);" onClick="{{ fsKeepFabric }}">
+                <span style="width:40px;height:40px;border-radius:12px;background:var(--surface-2);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8"><path d="M20 6L9 17l-5-5"/></svg>
+                </span>
+                <span style="flex:1;min-width:0;">
+                  <span style="display:block;font-weight:600;font-size:14px;">Keep the original fabric</span>
+                  <span style="display:block;font-size:12.5px;color:var(--text-3);">Try the garment on exactly as it is</span>
+                </span>
+              </div>
             </sc-if>
             <label style="display:flex;align-items:center;gap:14px;border:1px dashed rgba(var(--border-rgb),0.22);border-radius:14px;padding:14px 18px;margin-bottom:18px;cursor:pointer;background:var(--surface);">
               <span style="width:40px;height:40px;border-radius:12px;background:var(--surface-2);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
@@ -993,8 +868,8 @@
               </sc-for>
             </div>
             <div style="display:flex;justify-content:center;gap:12px;margin-top:32px;flex-wrap:wrap;">
-              <button style="background:transparent;border:1px solid rgba(var(--border-rgb),0.15);color:var(--text);border-radius:999px;padding:12px 22px;font-size:14px;cursor:pointer;" onClick="{{ fsToPhoto }}">Back</button>
-              <button style="background:{{ fsStep2Bg }};color:{{ fsStep2Color }};border:none;border-radius:999px;padding:13px 28px;font-weight:700;font-size:14px;cursor:{{ fsStep2Cursor }};" onClick="{{ fsToOutfits }}">Choose Your Outfit</button>
+              <button style="background:transparent;border:1px solid rgba(var(--border-rgb),0.15);color:var(--text);border-radius:999px;padding:12px 22px;font-size:14px;cursor:pointer;" onClick="{{ fsBack }}">Back</button>
+              <button style="background:{{ fsStep2Bg }};color:{{ fsStep2Color }};border:none;border-radius:999px;padding:13px 28px;font-weight:700;font-size:14px;cursor:{{ fsStep2Cursor }};" onClick="{{ fsNext }}">{{ fsStep2NextLabel }}</button>
             </div>
           </div>
         </div>
@@ -1003,9 +878,39 @@
       <!-- STEP 3 — OUTFIT -->
       <div style="display:{{ fsStep3Display }};max-width:1100px;margin:0 auto;">
         <div style="text-align:center;margin-bottom:22px;">
-          <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:600;margin-bottom:6px;">Choose Your Outfit</div>
-          <div style="color:var(--text-3);font-size:14px;">Every style is cut from the fabric you picked.</div>
+          <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:600;margin-bottom:6px;">{{ fsGarmentStepTitle }}</div>
+          <div style="color:var(--text-3);font-size:14px;">{{ fsGarmentStepHint }}</div>
         </div>
+        <sc-if value="{{ fsShowGarmentTabs }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;justify-content:center;gap:8px;margin-bottom:18px;">
+            <sc-for list="{{ garmentTabs }}" as="t" hint-placeholder-count="2">
+              <div style="padding:9px 20px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;background:{{ t.bg }};color:{{ t.color }};" onClick="{{ t.select }}">{{ t.label }}</div>
+            </sc-for>
+          </div>
+        </sc-if>
+        <sc-if value="{{ fsShowProducts }}" hint-placeholder-val="{{ false }}">
+          <div class="vt-grid-4" style="display:grid;grid-template-columns:repeat(4,1fr);gap:20px;margin-bottom:10px;">
+            <sc-for list="{{ fsProducts }}" as="pr" hint-placeholder-count="8">
+              <div style="background:var(--surface);border:1px solid {{ pr.borderColor }};border-radius:14px;overflow:hidden;">
+                <div style="height:240px;background:var(--surface-2);position:relative;cursor:pointer;" onClick="{{ pr.select }}">
+                  <img src="{{ pr.img }}" alt="{{ pr.name }}" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block;">
+                  <sc-if value="{{ pr.isSelected }}" hint-placeholder-val="{{ false }}">
+                    <div style="position:absolute;inset:0;border:2.5px solid var(--accent);border-radius:13px 13px 0 0;pointer-events:none;"></div>
+                    <div style="position:absolute;bottom:10px;right:10px;width:26px;height:26px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--on-accent)" stroke-width="3"><path d="M5 12.5l4.5 4.5L19 7"/></svg>
+                    </div>
+                  </sc-if>
+                </div>
+                <div style="padding:14px;">
+                  <div style="font-weight:600;font-size:14.5px;margin-bottom:3px;">{{ pr.name }}</div>
+                  <div style="font-size:11.5px;color:var(--text-3);margin-bottom:12px;">{{ pr.brand }} · {{ pr.price }}</div>
+                  <button style="width:100%;background:{{ pr.buttonBg }};color:{{ pr.buttonColor }};border:1px solid {{ pr.buttonBorder }};border-radius:999px;padding:9px 14px;font-weight:600;font-size:12.5px;cursor:pointer;" onClick="{{ pr.select }}">{{ pr.buttonLabel }}</button>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+        <sc-if value="{{ fsShowOutfits }}" hint-placeholder-val="{{ true }}">
         <div style="display:flex;justify-content:center;flex-wrap:wrap;gap:8px;margin-bottom:26px;">
           <sc-for list="{{ fsOutfitPills }}" as="p" hint-placeholder-count="3">
             <div style="padding:8px 18px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;background:{{ p.bg }};color:{{ p.color }};" onClick="{{ p.select }}">{{ p.label }}</div>
@@ -1041,9 +946,10 @@
             </div>
           </sc-for>
         </div>
+        </sc-if>
         <div style="display:flex;justify-content:center;gap:12px;margin-top:32px;flex-wrap:wrap;">
-          <button style="background:transparent;border:1px solid rgba(var(--border-rgb),0.15);color:var(--text);border-radius:999px;padding:12px 22px;font-size:14px;cursor:pointer;" onClick="{{ fsToFabrics }}">Back</button>
-          <button style="background:{{ fsStep3Bg }};color:{{ fsStep3Color }};border:none;border-radius:999px;padding:13px 28px;font-weight:700;font-size:14px;cursor:{{ fsStep3Cursor }};" onClick="{{ fsToPreview }}">Preview My Design</button>
+          <button style="background:transparent;border:1px solid rgba(var(--border-rgb),0.15);color:var(--text);border-radius:999px;padding:12px 22px;font-size:14px;cursor:pointer;" onClick="{{ fsBack }}">Back</button>
+          <button style="background:{{ fsStep3Bg }};color:{{ fsStep3Color }};border:none;border-radius:999px;padding:13px 28px;font-weight:700;font-size:14px;cursor:{{ fsStep3Cursor }};" onClick="{{ fsNext }}">{{ fsStep3NextLabel }}</button>
         </div>
       </div>
 
@@ -1070,8 +976,13 @@
           </div>
           <div style="background:var(--surface);border:1px solid rgba(var(--border-rgb),0.07);border-radius:16px;padding:22px;">
             <div style="display:flex;gap:14px;align-items:center;margin-bottom:16px;">
-              <div style="width:56px;height:56px;border-radius:10px;overflow:hidden;border:1px solid rgba(var(--border-rgb),0.1);flex-shrink:0;background:var(--surface-2);">
-                <img src="{{ fsSelectedFabricThumb }}" alt="{{ fsSelectedFabricName }}" style="width:100%;height:100%;object-fit:cover;display:block;">
+              <div style="width:56px;height:56px;border-radius:10px;overflow:hidden;border:1px solid rgba(var(--border-rgb),0.1);flex-shrink:0;background:var(--surface-2);display:flex;align-items:center;justify-content:center;">
+                <sc-if value="{{ fsHasSelectedFabric }}" hint-placeholder-val="{{ true }}">
+                  <img src="{{ fsSelectedFabricThumb }}" alt="{{ fsSelectedFabricName }}" style="width:100%;height:100%;object-fit:cover;display:block;">
+                </sc-if>
+                <sc-if value="{{ fsNoSelectedFabric }}" hint-placeholder-val="{{ false }}">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-4)" stroke-width="1.7"><path d="M20 6L9 17l-5-5"/></svg>
+                </sc-if>
               </div>
               <div style="min-width:0;">
                 <div style="font-size:10.5px;letter-spacing:1.4px;color:var(--accent);margin-bottom:3px;">FABRIC</div>
@@ -1367,6 +1278,11 @@ class Component extends DCLogic {
 
     // --- Fabric Studio ---
     fsStep: 1,
+    // 'fabric' = Fabric Studio (start from cloth), 'tryon' = Virtual Try-On
+    // (start from a garment, fabric optional). One flow, two entry points.
+    studioMode: 'fabric',
+    fsGarmentTab: 'outfits',
+    fsKeepOriginalFabric: false,
     fsLoaded: false,
     fsConfig: null,
     fsPersonPhoto: null,
@@ -1515,13 +1431,7 @@ class Component extends DCLogic {
   goSize = () => this.setState({ view: 'sizefinder', mobileMenuOpen: false });
   goSaved = () => this.setState({ view: 'mytryons', mobileMenuOpen: false });
 
-  openTryOnFresh = () => this.setState({
-    view: 'tryon', step: 1, isProcessing: false, tryOnError: null, resultImageUrl: null, selectedSuitId: null, mobileMenuOpen: false,
-  });
-
-  tryOnSuit = (suitId) => this.setState({
-    view: 'tryon', step: 1, selectedSuitId: suitId, isProcessing: false, tryOnError: null, resultImageUrl: null, mobileMenuOpen: false,
-  });
+  openTryOnFresh = () => this.goTryOn();
 
   toStep1 = () => this.setState({ step: 1, isProcessing: false, tryOnError: null });
 
@@ -1544,31 +1454,6 @@ class Component extends DCLogic {
   onPhotoDragOver = (e) => { e.preventDefault(); };
   clearUserPhoto = () => this.setState({ userPhotoDataUrl: null });
 
-  startLook = async () => {
-    if (!this.state.selectedSuitId) {
-      this.setState({ tryOnError: 'Please choose a suit from the collection first.' });
-      return;
-    }
-    const suit = RAW_SUITS.find((s) => s.id === this.state.selectedSuitId);
-    const modelImage = this.state.userPhotoDataUrl;
-    if (!modelImage) {
-      this.setState({ tryOnError: 'Please upload your photo to continue.' });
-      return;
-    }
-    this.setState({ step: 2, isProcessing: true, tryOnError: null, resultImageUrl: null });
-    try {
-      const productImage = await urlToDataUrl(suit.img);
-      const result = await runFashnTryOn(modelImage, productImage);
-      this.setState({ step: 2, isProcessing: false, resultImageUrl: result.output[0] });
-    } catch (err) {
-      console.error('FASHN try-on failed:', err);
-      this.setState({
-        step: 1,
-        isProcessing: false,
-        tryOnError: (err && err.message) || 'Something went wrong. Please try again.',
-      });
-    }
-  };
   pickSuit = (id) => this.setState({ selectedSuitId: id, tryOnError: null });
 
   downloadResultImage = () => this.downloadImage();
@@ -1896,9 +1781,71 @@ class Component extends DCLogic {
 
   // ------------------------------------------------------------ Fabric Studio
   goFabricStudio = () => {
-    this.setState({ view: 'fabricstudio', mobileMenuOpen: false, fsError: null });
+    // The two entry points order their steps differently, so entering one
+    // restarts the flow rather than dropping the visitor into a step that
+    // means something else now. The photo is worth keeping.
+    this.setState(state => ({
+      view: 'fabricstudio', studioMode: 'fabric', fsStep: 1, mobileMenuOpen: false, fsError: null,
+      fsGarmentTab: 'outfits', fsKeepOriginalFabric: false,
+      fsResultUrl: null, fsPreviewUrl: null,
+      // Shop products are not offered in Fabric Studio, so a product pick does
+      // not carry over.
+      fsSelectedOutfit: (state.fsSelectedOutfit && state.fsSelectedOutfit.isProduct)
+        ? null : state.fsSelectedOutfit,
+    }));
     this.fsEnsureLoaded();
   };
+
+  goTryOn = () => {
+    this.setState({
+      view: 'tryon', studioMode: 'tryon', fsStep: 1, mobileMenuOpen: false, fsError: null,
+      fsGarmentTab: 'products', fsKeepOriginalFabric: true,
+      fsResultUrl: null, fsPreviewUrl: null,
+    });
+    this.fsEnsureLoaded();
+  };
+
+  fsSetGarmentTab = (tab) => this.setState({ fsGarmentTab: tab });
+  fsKeepFabric = () => this.setState({
+    fsKeepOriginalFabric: true, fsSelectedFabric: null, fsFabricUpload: null, fsPreviewUrl: null,
+  });
+
+  // Which slot each picker occupies depends on the entry point: cloth first in
+  // Fabric Studio, garment first in Virtual Try-On.
+  fsSlot = (what) => {
+    const garmentFirst = this.state.studioMode === 'tryon';
+    if (what === 'garment') return garmentFirst ? 2 : 3;
+    return garmentFirst ? 3 : 2;
+  };
+
+  fsCanLeaveStep = (step) => {
+    const s = this.state;
+    if (step === 1) return !!s.fsPersonPhoto;
+    const garmentSlot = this.fsSlot('garment');
+    if (step === garmentSlot) return !!s.fsSelectedOutfit;
+    // The fabric slot: required in Fabric Studio, optional in Virtual Try-On.
+    if (s.studioMode === 'tryon') return true;
+    return !!s.fsSelectedFabric;
+  };
+
+  fsStepError = (step) => {
+    if (step === 1) return 'Please add your photo to continue.';
+    if (step === this.fsSlot('garment')) return 'Please choose or upload a garment to continue.';
+    return 'Please choose or upload a fabric to continue.';
+  };
+
+  fsNext = () => {
+    const step = this.state.fsStep;
+    if (!this.fsCanLeaveStep(step)) {
+      this.setState({ fsError: this.fsStepError(step) });
+      return;
+    }
+    const next = step + 1;
+    this.setState({ fsStep: next, fsError: null });
+    if (next === 4) this.fsLoadPreview();
+  };
+
+  fsBack = () => this.setState({ fsStep: Math.max(1, this.state.fsStep - 1), fsError: null });
 
   goMyDesigns = () => {
     this.setState({ view: 'mydesigns', mobileMenuOpen: false });
@@ -1991,23 +1938,11 @@ class Component extends DCLogic {
 
   fsGoStep = (step) => this.setState({ fsStep: step, fsError: null });
   fsToPhoto = () => this.fsGoStep(1);
-  fsToFabrics = () => {
-    if (!this.state.fsPersonPhoto) {
-      this.setState({ fsError: 'Please add your photo to continue.' });
-      return;
-    }
-    this.fsGoStep(2);
-  };
-  fsToOutfits = () => {
-    if (!this.state.fsSelectedFabric) {
-      this.setState({ fsError: 'Please choose a fabric to continue.' });
-      return;
-    }
-    this.fsGoStep(3);
-  };
+  fsToFabrics = () => this.fsGoStep(this.fsSlot('fabric'));
+  fsToOutfits = () => this.fsGoStep(this.fsSlot('garment'));
   fsToPreview = () => {
-    if (!this.state.fsSelectedOutfit) {
-      this.setState({ fsError: 'Please choose an outfit to continue.' });
+    if (!this.fsCanLeaveStep(this.state.fsStep)) {
+      this.setState({ fsError: this.fsStepError(this.state.fsStep) });
       return;
     }
     this.fsGoStep(4);
@@ -2026,10 +1961,25 @@ class Component extends DCLogic {
   fsSetOutfitCategory = (value) => this.setState({ fsOutfitCategory: value });
 
   fsSelectFabric = (fabric) => {
-    this.setState({ fsSelectedFabric: fabric, fsFabricUpload: null, fsPreviewUrl: null, fsError: null });
+    this.setState({
+      fsSelectedFabric: fabric, fsFabricUpload: null, fsKeepOriginalFabric: false,
+      fsPreviewUrl: null, fsError: null,
+    });
   };
   fsSelectOutfit = (outfit) => {
     this.setState({ fsSelectedOutfit: outfit, fsGarmentUpload: null, fsPreviewUrl: null, fsError: null });
+  };
+
+  // A product from the shop catalogue is just another garment reference; its
+  // image is converted to a data URL at generation time.
+  fsSelectProduct = (suit) => {
+    this.setState({
+      fsSelectedOutfit: {
+        id: null, name: suit.name, category: suit.category,
+        previewImageUrl: suit.img, isProduct: true, productImg: suit.img,
+      },
+      fsGarmentUpload: null, fsPreviewUrl: null, fsError: null,
+    });
   };
 
   // Uploads stand in for a catalogue pick: the rest of the flow only needs a
@@ -2045,6 +1995,7 @@ class Component extends DCLogic {
     e.target.value = '';
     this.fsReadUpload(file, (dataUrl) => this.setState({
       fsFabricUpload: dataUrl,
+      fsKeepOriginalFabric: false,
       fsSelectedFabric: { id: null, name: 'Your fabric', category: 'Uploaded', patternType: '', thumbnailUrl: dataUrl, isUpload: true },
       fsPreviewUrl: null,
       fsError: null,
@@ -2065,7 +2016,14 @@ class Component extends DCLogic {
 
   fsLoadPreview = async () => {
     const { fsSelectedFabric, fsSelectedOutfit, fsGarmentUpload } = this.state;
-    if (!fsSelectedFabric || !fsSelectedOutfit) return;
+    if (!fsSelectedOutfit) return;
+    if (!fsSelectedFabric) {
+      this.setState({
+        fsPreviewUrl: fsGarmentUpload || fsSelectedOutfit.previewImageUrl,
+        fsPreviewLoading: false,
+      });
+      return;
+    }
     if (!fsSelectedFabric.id || !fsSelectedOutfit.id) {
       // An uploaded fabric or garment has no catalogue composite; show the
       // garment reference itself, which is what the studio starts from.
@@ -2087,18 +2045,23 @@ class Component extends DCLogic {
 
   fsGenerate = async () => {
     const { fsPersonPhoto, fsSelectedFabric, fsSelectedOutfit, fsMode, fsPrompt } = this.state;
-    if (!fsPersonPhoto || !fsSelectedFabric || !fsSelectedOutfit) return;
+    if (!fsPersonPhoto || !fsSelectedOutfit) return;
     this.setState({ fsStep: 5, fsError: null, fsResultUrl: null, fsStageLabel: 'Getting ready…' });
     try {
+      let garmentImage = this.state.fsGarmentUpload || undefined;
+      if (!garmentImage && fsSelectedOutfit.isProduct) {
+        garmentImage = await urlToDataUrl(fsSelectedOutfit.productImg);
+      }
       const started = await studioFetch('/api/fabric-studio/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           personImage: fsPersonPhoto,
-          fabricId: fsSelectedFabric.id || undefined,
+          fabricId: (fsSelectedFabric && fsSelectedFabric.id) || undefined,
           outfitId: fsSelectedOutfit.id || undefined,
           fabricImage: this.state.fsFabricUpload || undefined,
-          garmentImage: this.state.fsGarmentUpload || undefined,
+          garmentImage,
+          garmentName: garmentImage ? fsSelectedOutfit.name : undefined,
           mode: fsMode,
           prompt: fsPrompt,
         }),
@@ -2216,23 +2179,16 @@ class Component extends DCLogic {
       border: s.sizeForm.fit === label ? 'var(--accent)' : 'rgba(var(--border-rgb),0.08)',
     }));
 
-    const stepLabels = ['Your Photo','Your Look'];
-    const tryonSteps = [1,2].map(n => {
-      const active = s.step === n;
-      const done = s.step > n;
-      return {
-        n, label: stepLabels[n - 1], showLine: n < 2,
-        bg: active ? 'var(--accent)' : (done ? 'rgba(var(--accent-rgb),0.14)' : 'var(--surface-2)'),
-        numBg: active ? 'var(--on-accent)' : (done ? 'var(--accent)' : 'rgba(var(--border-rgb),0.12)'),
-        numColor: active ? 'var(--accent)' : (done ? 'var(--on-accent)' : 'var(--text-3)'),
-        textColor: active ? 'var(--on-accent)' : (done ? 'var(--accent)' : 'var(--text-3)'),
-      };
-    });
 
     const sharePopupSuit = RAW_SUITS.find(x => x.id === s.sharePopupSuitId);
 
     // ---------------------------------------------------------- Fabric Studio
-    const fsStepLabels = ['Photo', 'Fabric', 'Outfit', 'Preview', 'Generate', 'Result'];
+    const fsGarmentFirst = s.studioMode === 'tryon';
+    const fsStepLabels = fsGarmentFirst
+      ? ['Photo', 'Garment', 'Fabric', 'Preview', 'Generate', 'Result']
+      : ['Photo', 'Fabric', 'Outfit', 'Preview', 'Generate', 'Result'];
+    const fsFabricSlot = fsGarmentFirst ? 3 : 2;
+    const fsGarmentSlot = fsGarmentFirst ? 2 : 3;
     const fsSteps = [1, 2, 3, 4, 5, 6].map(n => {
       const active = s.fsStep === n;
       const done = s.fsStep > n;
@@ -2279,6 +2235,30 @@ class Component extends DCLogic {
         select: () => this.fsSelectFabric(fabric),
       });
     });
+
+    const fsProducts = RAW_SUITS.map(suit => {
+      const isSelected = !!(s.fsSelectedOutfit && s.fsSelectedOutfit.isProduct
+        && s.fsSelectedOutfit.productImg === suit.img);
+      return {
+        ...suit,
+        isSelected,
+        borderColor: isSelected ? 'var(--accent)' : 'rgba(var(--border-rgb),0.07)',
+        buttonLabel: isSelected ? 'Selected ✓' : 'Select Garment',
+        buttonBg: isSelected ? 'var(--accent)' : 'var(--surface-3)',
+        buttonColor: isSelected ? 'var(--on-accent)' : 'var(--text)',
+        buttonBorder: isSelected ? 'var(--accent)' : 'rgba(var(--border-rgb),0.1)',
+        select: () => this.fsSelectProduct(suit),
+      };
+    });
+    const garmentTabs = [
+      { id: 'products', label: 'From the shop' },
+      { id: 'outfits', label: 'Outfit styles' },
+    ].map(tab => ({
+      label: tab.label,
+      bg: s.fsGarmentTab === tab.id ? 'var(--accent)' : 'var(--surface-2)',
+      color: s.fsGarmentTab === tab.id ? 'var(--on-accent)' : 'var(--text-2)',
+      select: () => this.fsSetGarmentTab(tab.id),
+    }));
 
     const selectedOutfitId = s.fsSelectedOutfit ? s.fsSelectedOutfit.id : null;
     const fsOutfits = (s.fsOutfits || [])
@@ -2379,7 +2359,7 @@ class Component extends DCLogic {
       isTryOn: s.view === 'tryon',
       navBg, navColor,
       goHome: this.goHome, goCatalog: this.goCatalog, goSize: this.goSize, goSaved: this.goSaved,
-      openTryOnFresh: this.openTryOnFresh,
+      openTryOnFresh: this.goTryOn,
       mobileMenuOpen: s.mobileMenuOpen,
       mobileMenuClosed: !s.mobileMenuOpen,
       toggleMobileMenu: this.toggleMobileMenu,
@@ -2412,14 +2392,7 @@ class Component extends DCLogic {
         shoulder: this.setField('shoulder'),
       },
       calcSize: this.calcSize,
-      isStep1: s.step === 1, isStep2: s.step === 2,
       isProcessing: s.isProcessing, isNotProcessing: !s.isProcessing,
-      step1Display: s.step === 1 ? 'block' : 'none',
-      step2Display: s.step === 2 ? 'block' : 'none',
-      processingDisplay: s.isProcessing ? 'block' : 'none',
-      notProcessingDisplay: !s.isProcessing ? 'block' : 'none',
-      toStep1: this.toStep1, startLook: this.startLook,
-      tryonSteps,
       hasUserPhoto: !!s.userPhotoDataUrl,
       hasNoUserPhoto: !s.userPhotoDataUrl,
       userPhotoDataUrl: s.userPhotoDataUrl,
@@ -2455,6 +2428,8 @@ class Component extends DCLogic {
       addToCart: this.addToCart,
       cartLabel: s.cart.some(t => t.suit.id === s.selectedSuitId) ? 'Added to Cart ✓' : 'Add to Cart',
       isFabricStudio: s.view === 'fabricstudio',
+      isStudio: s.view === 'fabricstudio' || s.view === 'tryon',
+      fsNoSelectedFabric: !s.fsSelectedFabric,
       isMyDesigns: s.view === 'mydesigns',
       goFabricStudio: this.goFabricStudio,
       goMyDesigns: this.goMyDesigns,
@@ -2463,8 +2438,9 @@ class Component extends DCLogic {
       fsHasError: !!s.fsError,
       fsError: s.fsError,
       fsStep1Display: s.fsStep === 1 ? 'block' : 'none',
-      fsStep2Display: s.fsStep === 2 ? 'block' : 'none',
-      fsStep3Display: s.fsStep === 3 ? 'block' : 'none',
+      // The two pickers swap slots depending on the entry point.
+      fsStep2Display: s.fsStep === fsFabricSlot ? 'block' : 'none',
+      fsStep3Display: s.fsStep === fsGarmentSlot ? 'block' : 'none',
       fsStep4Display: s.fsStep === 4 ? 'block' : 'none',
       fsStep5Display: s.fsStep === 5 ? 'block' : 'none',
       fsStep6Display: s.fsStep === 6 ? 'block' : 'none',
@@ -2478,14 +2454,18 @@ class Component extends DCLogic {
       fsHasReusablePhoto: !!s.userPhotoDataUrl && !s.fsPersonPhoto,
       fsHasPhotoWarnings: (s.fsPhotoWarnings || []).length > 0,
       fsPhotoWarnings: (s.fsPhotoWarnings || []).map(text => ({ text })),
+      fsStep1NextLabel: fsGarmentFirst ? 'Choose Your Garment' : 'Choose Your Fabric',
       fsStep1Bg: s.fsPersonPhoto ? 'linear-gradient(180deg,var(--cta-from),var(--cta-to))' : 'var(--surface-3)',
       fsStep1Color: s.fsPersonPhoto ? 'var(--on-accent)' : 'var(--text-4)',
       fsStep1Cursor: s.fsPersonPhoto ? 'pointer' : 'not-allowed',
-      fsStep2Bg: s.fsSelectedFabric ? 'linear-gradient(180deg,var(--cta-from),var(--cta-to))' : 'var(--surface-3)',
-      fsStep2Color: s.fsSelectedFabric ? 'var(--on-accent)' : 'var(--text-4)',
+      fsStep2Bg: this.fsCanLeaveStep(fsFabricSlot) ? 'linear-gradient(180deg,var(--cta-from),var(--cta-to))' : 'var(--surface-3)',
+      fsStep2Color: this.fsCanLeaveStep(fsFabricSlot) ? 'var(--on-accent)' : 'var(--text-4)',
       fsStep2Cursor: s.fsSelectedFabric ? 'pointer' : 'not-allowed',
       fsStep3Bg: s.fsSelectedOutfit ? 'linear-gradient(180deg,var(--cta-from),var(--cta-to))' : 'var(--surface-3)',
       fsStep3Color: s.fsSelectedOutfit ? 'var(--on-accent)' : 'var(--text-4)',
+      // Slot 2 is whichever picker comes first; its button leads to slot 3.
+      fsStep2NextLabel: fsGarmentFirst ? 'Preview My Design' : 'Choose Your Outfit',
+      fsStep3NextLabel: fsGarmentFirst ? 'Change the Fabric?' : 'Preview My Design',
       fsStep3Cursor: s.fsSelectedOutfit ? 'pointer' : 'not-allowed',
       fsToPhoto: this.fsToPhoto,
       fsToFabrics: this.fsToFabrics,
@@ -2505,9 +2485,38 @@ class Component extends DCLogic {
       fsSetFabricSearch: this.fsSetFabricSearch,
       fsCategoryPills, fsPatternPills, fsColorPills,
       fsOutfits, fsOutfitPills,
-      fsSelectedFabricName: s.fsSelectedFabric ? s.fsSelectedFabric.name : '',
+      studioTitle: fsGarmentFirst ? 'Virtual Try-On' : 'Fabric Studio',
+      studioHeadline: fsGarmentFirst ? 'See It On' : 'Design It In',
+      studioHeadlineAccent: fsGarmentFirst ? 'You' : 'Your Fabric',
+      studioIntro: fsGarmentFirst
+        ? 'Pick your photo and a garment — then, if you like, remake it in a different fabric.'
+        : 'Pick your photo, choose a fabric, choose a style — and see the outfit made from that exact cloth, on you.',
+      fsIsTryOnMode: fsGarmentFirst,
+      fsShowProducts: fsGarmentFirst && s.fsGarmentTab === 'products',
+      fsShowOutfits: !fsGarmentFirst || s.fsGarmentTab === 'outfits',
+      fsShowGarmentTabs: fsGarmentFirst,
+      garmentTabs,
+      fsProducts,
+      fsFabricOptional: fsGarmentFirst,
+      fsKeepOriginalFabric: s.fsKeepOriginalFabric && !s.fsSelectedFabric,
+      fsKeepFabric: this.fsKeepFabric,
+      fsKeepFabricBorder: (s.fsKeepOriginalFabric && !s.fsSelectedFabric) ? 'var(--accent)' : 'rgba(var(--border-rgb),0.12)',
+      fsNext: this.fsNext,
+      fsBack: this.fsBack,
+      fsGarmentStepTitle: fsGarmentFirst ? 'Choose Your Garment' : 'Choose Your Outfit',
+      fsGarmentStepHint: fsGarmentFirst
+        ? 'From the shop, from our outfit styles, or upload your own.'
+        : 'Every style is cut from the fabric you picked.',
+      fsFabricStepTitle: fsGarmentFirst ? 'Change the Fabric?' : 'Choose Your Fabric',
+      fsFabricStepHint: fsGarmentFirst
+        ? 'Optional — keep the garment as it is, or remake it in another cloth.'
+        : (s.fsFabricTotal + ' fabrics in the catalogue.'),
+      fsSelectedFabricName: s.fsSelectedFabric ? s.fsSelectedFabric.name : 'Original fabric',
       fsSelectedFabricThumb: s.fsSelectedFabric ? s.fsSelectedFabric.thumbnailUrl : '',
-      fsSelectedFabricMeta: s.fsSelectedFabric ? [s.fsSelectedFabric.category, s.fsSelectedFabric.patternType].filter(Boolean).join(' · ') : '',
+      fsHasSelectedFabric: !!s.fsSelectedFabric,
+      fsSelectedFabricMeta: s.fsSelectedFabric
+        ? [s.fsSelectedFabric.category, s.fsSelectedFabric.patternType].filter(Boolean).join(' · ')
+        : "Keeping the garment's own cloth",
       fsSelectedOutfitName: s.fsSelectedOutfit ? s.fsSelectedOutfit.name : '',
       fsSelectedOutfitPreview: s.fsSelectedOutfit ? s.fsSelectedOutfit.previewImageUrl : '',
       fsSelectedOutfitCategory: s.fsSelectedOutfit ? s.fsSelectedOutfit.category : '',

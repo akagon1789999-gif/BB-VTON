@@ -1,8 +1,18 @@
 # Fabric Studio
 
-Person **+** fabric **+** predefined outfit → the person wearing that outfit made from
-that fabric. It runs alongside the existing Virtual Try-On (person + garment) and reuses
-the same server, admin login, storage convention, design system and FASHN account.
+Person **+** garment **+** (optionally) fabric → the person wearing it. One flow with
+two entry points:
+
+* **Virtual Try-On** — photo, then a garment (a product from the shop, one of our outfit
+  styles, or an uploaded photo), then *optionally* a fabric to remake it in. Skipping the
+  fabric is a plain try-on, which is what this page always did.
+* **Fabric Studio** — the same flow, cloth first: photo, fabric, outfit. The fabric is
+  required here; that is the only difference.
+
+Both render from one implementation, so the steps, uploads, preview, result screen and
+history behave identically; only the step order, labels and whether fabric is optional
+change. The old two-step try-on view is gone, and with it the trip to the Catalog page
+just to pick a garment.
 
 ```
 USER ──┬── person photo ────────────────┐

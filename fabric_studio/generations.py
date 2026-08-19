@@ -72,7 +72,7 @@ def now():
 # ------------------------------------------------------------------- API ----
 def start_generation(person_image, fabric_id, outfit_id, user_id, mode=MODE_FAST,
                      prompt=None, options=None, run_async=True,
-                     fabric_upload=None, garment_upload=None):
+                     fabric_upload=None, garment_upload=None, garment_name=None):
     """Validate inputs, create the history record, and kick off the pipeline.
 
     Fabric and garment may each come from the catalogue (by id) or from the
@@ -82,8 +82,15 @@ def start_generation(person_image, fabric_id, outfit_id, user_id, mode=MODE_FAST
     imaging.require_pillow()
     from . import uploads
 
-    fabric = uploads.store_fabric(fabric_upload) if fabric_upload else catalog.require_fabric(fabric_id)
-    outfit = uploads.store_garment(garment_upload) if garment_upload else catalog.require_outfit(outfit_id)
+    outfit = (uploads.store_garment(garment_upload, name=garment_name)
+              if garment_upload else catalog.require_outfit(outfit_id))
+    # No fabric is a legitimate request: "try this garment on me, as it is".
+    if fabric_upload:
+        fabric = uploads.store_fabric(fabric_upload)
+    elif fabric_id:
+        fabric = catalog.require_fabric(fabric_id)
+    else:
+        fabric = None
     mode = MODE_DESIGN if mode == MODE_DESIGN else MODE_FAST
 
     prompt = (prompt or "").strip()[:500]
@@ -96,7 +103,7 @@ def start_generation(person_image, fabric_id, outfit_id, user_id, mode=MODE_FAST
     # Uploaded records live only for this generation, so the pipeline is handed
     # the records themselves rather than re-reading them by id.
     ephemeral = {}
-    if fabric.get("is_upload"):
+    if fabric and fabric.get("is_upload"):
         ephemeral["fabric"] = fabric
     if outfit.get("is_upload"):
         ephemeral["outfit"] = outfit
@@ -104,8 +111,8 @@ def start_generation(person_image, fabric_id, outfit_id, user_id, mode=MODE_FAST
     record = {
         "id": storage.new_id("gen"),
         "user_id": user_id or "anonymous",
-        "fabric_id": fabric["id"],
-        "fabric_name": fabric.get("name"),
+        "fabric_id": fabric["id"] if fabric else None,
+        "fabric_name": fabric.get("name") if fabric else None,
         "outfit_id": outfit["id"],
         "outfit_name": outfit.get("name"),
         "mode": mode,
@@ -134,15 +141,15 @@ def start_generation(person_image, fabric_id, outfit_id, user_id, mode=MODE_FAST
     if run_async:
         thread = threading.Thread(
             target=_run_pipeline,
-            args=(record["id"], person_data_url, fabric["id"], outfit["id"], mode, prompt,
-                  dict(options or {}), ephemeral),
+            args=(record["id"], person_data_url, fabric["id"] if fabric else None, outfit["id"],
+                  mode, prompt, dict(options or {}), ephemeral),
             name="fabric-studio-%s" % record["id"],
             daemon=True,
         )
         thread.start()
     else:
-        _run_pipeline(record["id"], person_data_url, fabric["id"], outfit["id"], mode, prompt,
-                      dict(options or {}), ephemeral)
+        _run_pipeline(record["id"], person_data_url, fabric["id"] if fabric else None,
+                      outfit["id"], mode, prompt, dict(options or {}), ephemeral)
     return GENERATION_STORE.get(record["id"])
 
 
@@ -230,7 +237,10 @@ def _run_pipeline(generation_id, person_data_url, fabric_id, outfit_id, mode, pr
             _set_stage(generation_id, STAGE_FABRIC)
             step = time.time()
             ephemeral = ephemeral or {}
-            fabric = ephemeral.get("fabric") or catalog.ensure_fabric_processed(fabric_id)
+            if fabric_id or ephemeral.get("fabric"):
+                fabric = ephemeral.get("fabric") or catalog.ensure_fabric_processed(fabric_id)
+            else:
+                fabric = None
             timings["fabricMs"] = int((time.time() - step) * 1000)
 
             # 2. Garment brief: either the cloth itself plus a prompt that
@@ -239,6 +249,9 @@ def _run_pipeline(generation_id, person_data_url, fabric_id, outfit_id, mode, pr
             step = time.time()
             outfit = ephemeral.get("outfit") or catalog.require_outfit(outfit_id)
             strategy = (options or {}).get("strategy") or config.vton_garment_strategy()
+            if fabric is None:
+                # Nothing to substitute: wear the garment as it is.
+                strategy = "as_is"
             if strategy == "remake":
                 _set_stage(generation_id, STAGE_REMAKE)
             garment = _build_garment_brief(strategy, fabric, outfit, prompt, mode)
@@ -299,7 +312,7 @@ def _run_pipeline(generation_id, person_data_url, fabric_id, outfit_id, mode, pr
                 "model": result.metadata.get("model"),
                 "creditsUsed": result.metadata.get("creditsUsed"),
                 "segmentation": parsing.to_dict(),
-                "fabricPattern": ((fabric.get("processed") or {}).get("metadata") or {}).get("patternType"),
+                "fabricPattern": (((fabric or {}).get("processed") or {}).get("metadata") or {}).get("patternType"),
             })
             GENERATION_STORE.update(generation_id, {
                 "status": "completed",
@@ -318,6 +331,23 @@ def _run_pipeline(generation_id, person_data_url, fabric_id, outfit_id, mode, pr
             log_exception("generation:%s" % generation_id, exc)
             _fail(generation_id, "We couldn't generate your outfit this time. Please try again.",
                   timings, started, code="unexpected_error")
+
+
+def _garment_as_is(outfit, user_prompt):
+    """The garment with no fabric change — the plain try-on path."""
+    relative = (outfit or {}).get("reference_image_path")
+    if not relative:
+        raise ValidationError(
+            "Please choose a garment to try on.",
+            detail="Outfit %s has no image to try on" % (outfit or {}).get("id"),
+        )
+    return {
+        "image": _data_url_for_media(relative),
+        "url": storage.media_url(relative),
+        "cached": True,
+        "prompt": prompts.build_as_is_prompt(outfit, user_prompt),
+        "source": "as_is",
+    }
 
 
 def _remake_reference(fabric, outfit, user_prompt, mode):
@@ -363,6 +393,9 @@ def _remake_reference(fabric, outfit, user_prompt, mode):
 
 
 def _build_garment_brief(strategy, fabric, outfit, user_prompt, mode="fast"):
+    if strategy == "as_is":
+        return _garment_as_is(outfit, user_prompt)
+
     """What the model receives as the garment, and the prompt that explains it.
 
     FASHN confirmed `tryon-max` can tailor a garment from a length of cloth
@@ -408,13 +441,13 @@ def _build_garment_brief(strategy, fabric, outfit, user_prompt, mode="fast"):
 
 
 def _build_request(generation_id, person_data_url, fabric, outfit, garment, parsing, mode, strategy, options):
-    metadata = (fabric.get("processed") or {}).get("metadata") or {}
+    metadata = ((fabric or {}).get("processed") or {}).get("metadata") or {}
     garment_metadata = {
         "category": outfit.get("garment_type") or "one-pieces",
         "maskType": outfit.get("mask_type"),
-        "fabricName": fabric.get("name"),
+        "fabricName": (fabric or {}).get("name"),
         "fabricDescription": metadata.get("description"),
-        "patternType": fabric.get("pattern_type") or metadata.get("patternType"),
+        "patternType": (fabric or {}).get("pattern_type") or metadata.get("patternType"),
         "dominantColors": [c.get("name") for c in metadata.get("dominantColors", [])],
     }
     if parsing.available:

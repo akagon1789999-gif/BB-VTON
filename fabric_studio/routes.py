@@ -197,9 +197,6 @@ def create_blueprint(admin_required):
             raise ValidationError("Please upload your photo to continue.", detail="Missing personImage")
         fabric_upload = payload.get("fabricImage")
         garment_upload = payload.get("garmentImage")
-        if not payload.get("fabricId") and not fabric_upload:
-            raise ValidationError("Please choose or upload a fabric to continue.",
-                                  detail="Missing fabricId and fabricImage")
         if not payload.get("outfitId") and not garment_upload:
             raise ValidationError("Please choose an outfit or upload a garment to continue.",
                                   detail="Missing outfitId and garmentImage")
@@ -210,6 +207,7 @@ def create_blueprint(admin_required):
             outfit_id=payload.get("outfitId"),
             fabric_upload=fabric_upload,
             garment_upload=garment_upload,
+            garment_name=(payload.get("garmentName") or "").strip()[:120] or None,
             user_id=client_id(),
             mode=payload.get("mode") or generations.MODE_FAST,
             prompt=payload.get("prompt"),

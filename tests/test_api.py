@@ -178,8 +178,8 @@ class GenerationApiTest(ApiTestCase):
     def test_missing_inputs_are_rejected(self):
         cases = [
             ({}, "photo"),
-            ({"personImage": context.person_data_url()}, "fabric"),
-            ({"personImage": context.person_data_url(), "fabricId": "fab_api"}, "outfit"),
+            ({"personImage": context.person_data_url()}, "garment"),
+            ({"personImage": context.person_data_url(), "fabricId": "fab_api"}, "garment"),
         ]
         for payload, fragment in cases:
             with self.subTest(payload=sorted(payload)):
@@ -435,8 +435,47 @@ class UploadedInputsTest(GarmentStrategyTest):
         self.assertEqual(GENERATION_STORE.get(first["generationId"])["fabric_id"],
                          GENERATION_STORE.get(second["generationId"])["fabric_id"])
 
-    def test_missing_both_id_and_upload_is_rejected(self):
+    def test_a_garment_is_required(self):
         status, body = self.post_json("/api/fabric-studio/generate", {
-            "personImage": context.person_data_url(), "outfitId": "out_api"})
+            "personImage": context.person_data_url(), "fabricId": "fab_api"})
         self.assertEqual(status, 400)
-        self.assertIn("fabric", body["message"])
+        self.assertIn("garment", body["message"])
+
+
+class PlainTryOnTest(GarmentStrategyTest):
+    """No fabric chosen: wear the garment exactly as it is.
+
+    This is the unified flow's other half — the plain "try this on me" path the
+    storefront had before Fabric Studio existed.
+    """
+
+    def _garment_photo(self):
+        photo = imaging.Image.new("RGB", (600, 800), (18, 18, 22))
+        from PIL import ImageDraw
+        ImageDraw.Draw(photo).rounded_rectangle([150, 120, 450, 700], radius=40, fill=(60, 90, 150))
+        return imaging.to_data_url(photo)
+
+    def test_a_garment_without_a_fabric_is_worn_as_is(self):
+        request, final = self._capture_request(
+            {"fabricId": None, "garmentImage": self._garment_photo(), "outfitId": None})
+        self.assertEqual(final["status"], "completed")
+        record = GENERATION_STORE.get(final["generationId"])
+        self.assertEqual(record["metadata"]["strategy"], "as_is")
+        self.assertIsNone(record["fabric_id"])
+        self.assertIn("keeping its colour, fabric and cut exactly as shown", request.prompt)
+        self.assertNotIn("Replace the garment material", request.prompt)
+
+    def test_a_catalogue_outfit_without_a_fabric_also_works(self):
+        # Outfits carry no reference photo by default, so this must still be
+        # refused clearly rather than failing deep in the pipeline.
+        _request, final = self._capture_request({"fabricId": None})
+        self.assertEqual(final["status"], "failed")
+        self.assertIn("garment", final["error"].lower())
+
+    def test_history_records_the_plain_try_on(self):
+        _request, final = self._capture_request(
+            {"fabricId": None, "garmentImage": self._garment_photo(), "outfitId": None})
+        view = [g for g in self.get_json("/api/fabric-studio/generations")[1]["items"]
+                if g["generationId"] == final["generationId"]]
+        self.assertEqual(len(view), 1)
+        self.assertIsNone(view[0]["fabricName"])

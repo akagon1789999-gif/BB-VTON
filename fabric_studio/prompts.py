@@ -142,6 +142,17 @@ def build_edit_prompt(outfit, fabric, user_prompt=None):
     return _clip(" ".join(sentences))
 
 
+def build_as_is_prompt(outfit, user_prompt=None):
+    """Prompt for a try-on with no fabric change: wear the garment as shown."""
+    sentences = ["Dress the person in the garment from the product image, keeping its "
+                 "colour, fabric and cut exactly as shown, with natural drape and shadows."]
+    extra = _sentence(user_prompt)
+    if extra:
+        sentences.append(extra)
+    sentences.append("Keep the person's face, body, pose and the background exactly as they are.")
+    return _clip(" ".join(sentences))
+
+
 def build_template_prompt(outfit, fabric, user_prompt=None):
     """Prompt for the composed-template strategy.
 
