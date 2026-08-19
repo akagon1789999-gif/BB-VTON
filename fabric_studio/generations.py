@@ -2,7 +2,9 @@
 
     person photo -> validate/normalise
                  -> processed fabric (cached)
-                 -> composed garment template (cached)
+                 -> garment brief: the fabric itself + a prompt describing the
+                    outfit (default), or a flat-lay composed from an outfit
+                    template (VTON_GARMENT_STRATEGY=template)
                  -> segmentation hook (no-op by default)
                  -> VirtualTryOnProvider.generate + poll
                  -> store result -> history record
@@ -17,7 +19,7 @@ import time
 import urllib.error
 import urllib.request
 
-from . import catalog, config, garment_composer, imaging, segmentation, storage
+from . import catalog, config, garment_composer, imaging, prompts, segmentation, storage
 from .errors import FabricStudioError, ProviderError, ValidationError, log, log_exception
 from .virtual_tryon import STATUS_COMPLETED, STATUS_FAILED, TryOnRequest, get_provider
 
@@ -207,13 +209,16 @@ def _run_pipeline(generation_id, person_data_url, fabric_id, outfit_id, mode, pr
             fabric = catalog.ensure_fabric_processed(fabric_id)
             timings["fabricMs"] = int((time.time() - step) * 1000)
 
-            # 2. Garment: pour the fabric into the outfit template (cached).
+            # 2. Garment brief: either the cloth itself plus a prompt that
+            #    describes the outfit, or a flat-lay composed from a template.
             _set_stage(generation_id, STAGE_GARMENT)
             step = time.time()
             outfit = catalog.require_outfit(outfit_id)
-            garment = garment_composer.compose(fabric, outfit)
+            strategy = (options or {}).get("strategy") or config.vton_garment_strategy()
+            garment = _build_garment_brief(strategy, fabric, outfit, prompt)
             timings["garmentMs"] = int((time.time() - step) * 1000)
-            timings["garmentCached"] = garment["cached"]
+            timings["garmentCached"] = garment.get("cached", False)
+            timings["strategy"] = strategy
 
             # 3. Person: segmentation hook (no-op unless a parser is configured).
             _set_stage(generation_id, STAGE_SEGMENT)
@@ -225,7 +230,7 @@ def _run_pipeline(generation_id, person_data_url, fabric_id, outfit_id, mode, pr
             _set_stage(generation_id, STAGE_SUBMIT)
             provider = get_provider()
             request = _build_request(
-                generation_id, person_data_url, fabric, outfit, garment, parsing, mode, prompt, options
+                generation_id, person_data_url, fabric, outfit, garment, parsing, mode, strategy, options
             )
             step = time.time()
             result = provider.generate(request)
@@ -255,8 +260,10 @@ def _run_pipeline(generation_id, person_data_url, fabric_id, outfit_id, mode, pr
 
             metadata = GENERATION_STORE.get(generation_id).get("metadata") or {}
             metadata.update({
+                "strategy": strategy,
+                "builtPrompt": garment["prompt"],
                 "garmentImageUrl": garment["url"],
-                "garmentCached": garment["cached"],
+                "garmentCached": garment.get("cached", False),
                 "model": result.metadata.get("model"),
                 "creditsUsed": result.metadata.get("creditsUsed"),
                 "segmentation": parsing.to_dict(),
@@ -281,7 +288,40 @@ def _run_pipeline(generation_id, person_data_url, fabric_id, outfit_id, mode, pr
                   timings, started, code="unexpected_error")
 
 
-def _build_request(generation_id, person_data_url, fabric, outfit, garment, parsing, mode, prompt, options):
+def _build_garment_brief(strategy, fabric, outfit, user_prompt):
+    """What the model receives as the garment, and the prompt that explains it.
+
+    FASHN confirmed `tryon-max` can tailor a garment from a length of cloth
+    when the prompt says so, so the default sends the fabric itself. The
+    composed template remains available: it costs no generative guesswork about
+    the garment's shape and is cheaper on `tryon-v1.6`.
+    """
+    if strategy == "template":
+        composed = garment_composer.compose(fabric, outfit)
+        return {
+            "image": _data_url_for_media(composed["path"]),
+            "url": composed["url"],
+            "cached": composed["cached"],
+            "prompt": prompts.build_template_prompt(outfit, fabric, user_prompt),
+        }
+
+    processed = (fabric.get("processed") or {})
+    relative = processed.get("normalizedPath")
+    if not relative:
+        raise ValidationError(
+            "That fabric is still being prepared. Please try again in a moment.",
+            detail="Fabric %s has no normalised asset" % fabric.get("id"),
+        )
+    builder = prompts.build_edit_prompt if strategy == "edit" else prompts.build_tryon_prompt
+    return {
+        "image": _data_url_for_media(relative),
+        "url": storage.media_url(relative),
+        "cached": True,
+        "prompt": builder(outfit, fabric, user_prompt),
+    }
+
+
+def _build_request(generation_id, person_data_url, fabric, outfit, garment, parsing, mode, strategy, options):
     metadata = (fabric.get("processed") or {}).get("metadata") or {}
     garment_metadata = {
         "category": outfit.get("garment_type") or "one-pieces",
@@ -295,31 +335,33 @@ def _build_request(generation_id, person_data_url, fabric, outfit, garment, pars
         garment_metadata["masks"] = parsing.masks
 
     request_options = {
+        "strategy": strategy,
         "mode": "quality" if mode == MODE_DESIGN else "fast",
         "output_format": "jpeg",
+        # The prompt is always built from catalogue data; MODE B only adds the
+        # customer's own words to it.
+        "prompt": garment["prompt"],
     }
     request_options.update(options or {})
-    if mode == MODE_DESIGN:
-        # MODE B: the outfit's own description plus whatever the user asked for.
-        pieces = [outfit.get("default_prompt") or "", prompt]
-        request_options["prompt"] = ", ".join([p for p in pieces if p]).strip(", ")
+    request_options["strategy"] = strategy
+    request_options["prompt"] = garment["prompt"]
 
     return TryOnRequest(
         person_image=person_data_url,
-        garment_image=_garment_reference(garment),
+        garment_image=garment["image"],
         garment_metadata=garment_metadata,
         options=request_options,
         request_id=generation_id,
     )
 
 
-def _garment_reference(garment):
-    """Give the provider the garment as a data URL.
+def _data_url_for_media(relative):
+    """Inline a stored image for the provider.
 
-    A local /media path is not reachable from a cloud provider, and this app
-    has no public asset host of its own, so the composed garment travels inline.
+    A local /media path is not reachable from a cloud provider, and this app has
+    no public asset host of its own, so the image travels in the request.
     """
-    path = storage.media_path(garment["path"])
+    path = storage.media_path(relative)
     with open(str(path), "rb") as handle:
         return imaging.to_data_url(handle.read(), "JPEG")
 

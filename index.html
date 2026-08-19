@@ -1042,11 +1042,11 @@
               <sc-if value="{{ fsPreviewLoading }}" hint-placeholder-val="{{ true }}">
                 <div style="text-align:center;color:var(--text-3);font-size:13px;">
                   <div style="width:36px;height:36px;border-radius:50%;border:3px solid rgba(var(--accent-rgb),0.2);border-top-color:var(--accent);margin:0 auto 14px;animation:vt-spin 1s linear infinite;"></div>
-                  Cutting your outfit…
+                  Sketching your outfit…
                 </div>
               </sc-if>
             </div>
-            <div style="color:var(--text-4);font-size:11.5px;text-align:center;margin-top:12px;">This is the garment we build from your fabric before fitting it to your photo.</div>
+            <div style="color:var(--text-4);font-size:11.5px;text-align:center;margin-top:12px;line-height:1.5;">A sketch of your fabric in this cut. Your look is generated from the fabric itself, tailored to this design.</div>
           </div>
           <div style="background:var(--surface);border:1px solid rgba(var(--border-rgb),0.07);border-radius:16px;padding:22px;">
             <div style="display:flex;gap:14px;align-items:center;margin-bottom:16px;">
@@ -1286,8 +1286,8 @@ async function runFashnTryOn(modelImage, productImage) {
 // garment composition, provider calls) all happens server-side; the browser
 // only picks, polls and displays.
 const FABRIC_STUDIO_MODES = [
-  { id: 'fast', name: 'Fast Fabric Try-On', description: 'Your fabric applied to a tailored outfit template. Fastest, cheapest, and most faithful to the cloth.' },
-  { id: 'design', name: 'AI Design', description: 'Adds a design brief so the studio can restyle details like collars and embroidery.' },
+  { id: 'fast', name: 'Fabric Try-On', description: 'Your fabric, tailored into the outfit you picked and fitted to your photo.' },
+  { id: 'design', name: 'AI Design', description: 'Adds your own brief — collar, embroidery, styling — and generates at the highest quality.' },
 ];
 
 function bbClientId() {

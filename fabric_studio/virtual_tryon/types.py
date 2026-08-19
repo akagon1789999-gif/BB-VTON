@@ -29,6 +29,16 @@ class TryOnRequest(object):
         return self.options.get("mode") or "fast"
 
     @property
+    def strategy(self):
+        """How the garment reaches the model: fabric | template | edit.
+
+        'fabric' sends the cloth itself and describes the garment in the
+        prompt; 'template' sends a composed flat-lay; 'edit' sends the person
+        with the fabric as visual context.
+        """
+        return self.options.get("strategy") or "fabric"
+
+    @property
     def category(self):
         """tops | bottoms | one-pieces — how much of the body to replace."""
         return self.garment_metadata.get("category") or "one-pieces"
@@ -40,6 +50,7 @@ class TryOnRequest(object):
     def summary(self):
         return {
             "mode": self.mode,
+            "strategy": self.strategy,
             "category": self.category,
             "hasPrompt": bool(self.prompt),
             "requestId": self.request_id,

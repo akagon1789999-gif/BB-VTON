@@ -5,11 +5,21 @@ Implemented against the documented FASHN prediction API: a single
 authenticated with `Authorization: Bearer $FASHN_API_KEY`. No endpoint or
 parameter here is invented — see .agents/skills/fashn/reference.md.
 
-Model choice is a *mode*, not a caller decision:
-  fast    -> tryon-v1.6  (cheapest; accepts `category` + `garment_photo_type`,
-                          which is exactly what a composed flat-lay is)
-  quality -> tryon-max   (flagship; accepts a refinement `prompt`)
-Both are overridable with VTON_FAST_MODEL / VTON_QUALITY_MODEL.
+The model is chosen by *strategy* (how the garment reaches the model) and
+*mode* (how much to spend), never by the caller naming a model:
+
+  fabric   -> tryon-max   `product_image` is the fabric itself and the prompt
+                          explains that it is cloth to be tailored. This is
+                          FASHN's own recommendation for fabric-to-garment and
+                          the default.
+  template -> tryon-v1.6  `garment_image` is a flat-lay we composed from the
+              (or -max)   fabric, so it needs no explaining — just a category
+                          and a photo-type hint. Cheapest and most repeatable.
+  edit     -> edit        `image` is the person and `image_context` is the
+                          fabric; the prompt does the dressing.
+
+Overridable with VTON_FABRIC_MODEL / VTON_FAST_MODEL / VTON_QUALITY_MODEL /
+VTON_EDIT_MODEL.
 """
 from .. import config
 from ..errors import ProviderConfigError, ProviderError, friendly_runtime_message
@@ -35,6 +45,10 @@ _STATUS_MAP = {
 }
 
 VALID_CATEGORIES = ("auto", "tops", "bottoms", "one-pieces")
+
+# Matches prompts.MAX_PROMPT_CHARS; duplicated here so the provider never
+# depends on the prompt builder.
+MAX_PROMPT_CHARS = 900
 
 
 class FashnApiProvider(VirtualTryOnProvider):
@@ -65,6 +79,11 @@ class FashnApiProvider(VirtualTryOnProvider):
         return {"Authorization": "Bearer %s" % self.api_key}
 
     def model_for(self, request):
+        strategy = request.strategy
+        if strategy == "fabric":
+            return config.vton_fabric_model()
+        if strategy == "edit":
+            return config.vton_edit_model()
         if request.mode == "quality":
             return config.vton_quality_model()
         return config.vton_fast_model()
@@ -72,44 +91,71 @@ class FashnApiProvider(VirtualTryOnProvider):
     # ------------------------------------------------------------ inputs ---
     def build_inputs(self, request, model_name):
         """Map the neutral request onto this model's documented input names."""
-        person = request.person_image
-        garment = request.garment_image
         options = request.options
-
-        if model_name.startswith("tryon-max"):
-            inputs = {
-                "model_image": person,
-                "product_image": garment,
-                "output_format": options.get("output_format", "jpeg"),
-            }
-            prompt = request.prompt
-            if prompt:
-                inputs["prompt"] = prompt[:600]
-            if options.get("resolution"):
-                inputs["resolution"] = options["resolution"]
-            if options.get("generation_mode"):
-                inputs["generation_mode"] = options["generation_mode"]
+        if model_name.startswith("edit"):
+            inputs = self._edit_inputs(request)
+        elif model_name.startswith("tryon-max"):
+            inputs = self._tryon_max_inputs(request)
         else:
-            # tryon-v1.6 (and anything else that follows its schema)
-            category = request.category
-            if category not in VALID_CATEGORIES:
-                category = "auto"
-            inputs = {
-                "model_image": person,
-                "garment_image": garment,
-                "category": category,
-                # The garment image is a composed flat-lay, so say so instead of
-                # letting the model guess it is a photo of someone wearing it.
-                "garment_photo_type": "flat-lay",
-                "mode": options.get("speed_mode", "balanced"),
-                "output_format": options.get("output_format", "jpeg"),
-            }
-            if options.get("moderation_level"):
-                inputs["moderation_level"] = options["moderation_level"]
+            inputs = self._tryon_v16_inputs(request)
 
+        inputs["output_format"] = options.get("output_format", "jpeg")
         if options.get("seed") is not None:
             inputs["seed"] = int(options["seed"])
         return inputs
+
+    def _tryon_max_inputs(self, request):
+        """Flagship try-on. Carries the whole fabric brief in `prompt`."""
+        inputs = {
+            "model_image": request.person_image,
+            "product_image": request.garment_image,
+            "generation_mode": self._generation_mode(request, ("balanced", "quality")),
+            "resolution": request.options.get("resolution") or config.vton_resolution(),
+        }
+        prompt = request.prompt
+        if prompt:
+            inputs["prompt"] = prompt[:MAX_PROMPT_CHARS]
+        return inputs
+
+    def _tryon_v16_inputs(self, request):
+        """Legacy try-on: cheapest, and the only one taking an explicit category."""
+        category = request.category
+        if category not in VALID_CATEGORIES:
+            category = "auto"
+        inputs = {
+            "model_image": request.person_image,
+            "garment_image": request.garment_image,
+            "category": category,
+            # The garment image is a composed flat-lay, so say so instead of
+            # letting the model guess it is a photo of someone wearing it.
+            "garment_photo_type": "flat-lay",
+            "mode": request.options.get("speed_mode", "balanced"),
+        }
+        if request.options.get("moderation_level"):
+            inputs["moderation_level"] = request.options["moderation_level"]
+        return inputs
+
+    def _edit_inputs(self, request):
+        """Person as the canvas, fabric as visual context."""
+        if not request.prompt:
+            raise ProviderError(detail="The edit model requires a prompt; none was built.")
+        inputs = {
+            "image": request.person_image,
+            "prompt": request.prompt[:MAX_PROMPT_CHARS],
+            "image_context": request.garment_image,
+            "generation_mode": self._generation_mode(request, ("fast", "balanced", "quality")),
+            "resolution": request.options.get("resolution") or config.vton_resolution(),
+        }
+        if request.options.get("mask"):
+            inputs["mask"] = request.options["mask"]
+        return inputs
+
+    def _generation_mode(self, request, allowed):
+        requested = request.options.get("generation_mode")
+        if requested in allowed:
+            return requested
+        preferred = "quality" if request.mode == "quality" else "balanced"
+        return preferred if preferred in allowed else allowed[0]
 
     # ------------------------------------------------------------ actions --
     def generate(self, request):

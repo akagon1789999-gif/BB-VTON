@@ -1,13 +1,14 @@
 """HTTP surface: catalogue endpoints, generation lifecycle, history, admin."""
 import functools
 import json
+import os
 import time
 import unittest
 
 from flask import Flask, Response
 
 from . import context
-from fabric_studio import register
+from fabric_studio import catalog, imaging, register, storage
 from fabric_studio.generations import GENERATION_STORE
 
 ADMIN_HEADER = {"X-Test-Admin": "yes"}
@@ -252,3 +253,67 @@ class AdminApiTest(ApiTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class GarmentStrategyTest(ApiTestCase):
+    """Which image reaches the provider, and what the prompt says about it."""
+
+    def _capture_request(self, payload):
+        """Run a generation and return the TryOnRequest the provider received."""
+        from fabric_studio.virtual_tryon import get_provider
+        provider = get_provider()
+        captured = {}
+        original = provider.generate
+
+        def spy(request):
+            captured["request"] = request
+            return original(request)
+
+        provider.generate = spy
+        self.addCleanup(setattr, provider, "generate", original)
+
+        base = {"personImage": context.person_data_url(),
+                "fabricId": "fab_api", "outfitId": "out_api"}
+        base.update(payload)
+        status, body = self.post_json("/api/fabric-studio/generate", base)
+        self.assertEqual(status, 202)
+        deadline = time.time() + 20
+        while time.time() < deadline:
+            _s, polled = self.get_json("/api/fabric-studio/generations/" + body["generationId"])
+            if polled["status"] in ("completed", "failed"):
+                break
+            time.sleep(0.2)
+        return captured.get("request"), polled
+
+    def test_default_strategy_sends_the_fabric_itself(self):
+        request, final = self._capture_request({})
+        self.assertEqual(final["status"], "completed")
+        self.assertEqual(request.strategy, "fabric")
+        # The image handed over is the processed fabric, not a composed garment.
+        fabric = catalog.get_fabric("fab_api")
+        expected = imaging.to_data_url(
+            storage.media_path(fabric["processed"]["normalizedPath"]).read_bytes(), "JPEG")
+        self.assertEqual(request.garment_image, expected)
+        self.assertIn("flat length of fabric", request.prompt)
+        self.assertIn("modern senator", request.prompt.lower())
+
+    def test_template_strategy_sends_a_composed_flat_lay(self):
+        os.environ["VTON_GARMENT_STRATEGY"] = "template"
+        self.addCleanup(os.environ.pop, "VTON_GARMENT_STRATEGY", None)
+        request, final = self._capture_request({})
+        self.assertEqual(final["status"], "completed")
+        self.assertEqual(request.strategy, "template")
+        self.assertNotIn("flat length of fabric", request.prompt)
+        self.assertIn("drape", request.prompt)
+
+    def test_design_mode_folds_the_customer_brief_into_the_prompt(self):
+        request, _final = self._capture_request(
+            {"mode": "design", "prompt": "mandarin collar with gold piping"})
+        self.assertIn("Mandarin collar with gold piping.", request.prompt)
+        self.assertEqual(request.mode, "quality")
+
+    def test_the_built_prompt_is_recorded_on_the_generation(self):
+        _request, final = self._capture_request({})
+        record = GENERATION_STORE.get(final["generationId"])
+        self.assertEqual(record["metadata"]["strategy"], "fabric")
+        self.assertIn("flat length of fabric", record["metadata"]["builtPrompt"])

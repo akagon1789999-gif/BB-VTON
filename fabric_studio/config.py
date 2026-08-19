@@ -146,3 +146,29 @@ def history_limit():
 def debug_errors():
     """When on, API error payloads include the technical detail as well."""
     return _env_bool("FABRIC_STUDIO_DEBUG", False)
+
+
+# ------------------------------------------------------------- strategies ---
+# How the garment reaches the try-on model:
+#   fabric   - send the fabric itself as the product image and describe the
+#              garment in the prompt (FASHN's own recommendation; default)
+#   template - send a flat-lay composed from the fabric and an outfit template
+#              (deterministic and cheap, but the garment shape is ours, not the
+#              model's)
+#   edit     - send the person as the image and the fabric as image_context
+def vton_garment_strategy():
+    value = _env("VTON_GARMENT_STRATEGY", "fabric").lower()
+    return value if value in ("fabric", "template", "edit") else "fabric"
+
+
+# Model used when the fabric goes straight to the try-on model.
+def vton_fabric_model():
+    return _env("VTON_FABRIC_MODEL", "tryon-max")
+
+
+def vton_edit_model():
+    return _env("VTON_EDIT_MODEL", "edit")
+
+
+def vton_resolution():
+    return _env("VTON_RESOLUTION", "1k")

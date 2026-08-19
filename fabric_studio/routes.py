@@ -20,6 +20,7 @@ from . import (
     imaging,
     importer,
     migrations,
+    prompts,
     segmentation,
     storage,
 )
@@ -96,11 +97,12 @@ def create_blueprint(admin_required):
             "mockMode": provider.name == "mock",
             "supportsDesignMode": provider.supports_prompt,
             "segmentation": segmentation.get_segmentation_provider().describe(),
+            "garmentStrategy": config.vton_garment_strategy(),
             "modes": [
-                {"id": generations.MODE_FAST, "name": "Fast Fabric Try-On",
-                 "description": "Your fabric applied to a tailored outfit template. Fastest and most faithful to the cloth."},
+                {"id": generations.MODE_FAST, "name": "Fabric Try-On",
+                 "description": "Your fabric, tailored into the outfit you picked and fitted to your photo."},
                 {"id": generations.MODE_DESIGN, "name": "AI Design",
-                 "description": "Adds a design brief so the studio can restyle details like collars and embroidery."},
+                 "description": "Adds your own brief — collar, embroidery, styling — and generates at the highest quality."},
             ],
             "limits": {
                 "maxUploadBytes": config.max_upload_bytes(),
@@ -175,6 +177,10 @@ def create_blueprint(admin_required):
         return json_response(200, {
             "garmentImageUrl": composed["url"],
             "cached": composed["cached"],
+            # What we will actually ask the model for. Surfaced so the studio
+            # can show it and an admin can debug a disappointing result.
+            "designBrief": prompts.build_tryon_prompt(outfit, fabric),
+            "strategy": config.vton_garment_strategy(),
             "fabric": catalog.fabric_view(fabric),
             "outfit": catalog.outfit_view(outfit),
         })

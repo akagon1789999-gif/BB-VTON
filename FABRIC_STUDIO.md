@@ -26,11 +26,18 @@ USER ──┬── person photo ───────────────�
                         result stored + history record
 ```
 
-The deliberate choice in the middle: **the garment is composed, not imagined**. The
-customer's actual fabric pixels are tiled into a shaded outfit silhouette and handed to
-the try-on model as an ordinary flat-lay product photo. That is why MODE A costs one
-try-on call, keeps the print and colours intact, and produces the same garment every
-time for the same pairing.
+**How the garment reaches the model** is a strategy, set by
+`VTON_GARMENT_STRATEGY`:
+
+| Strategy | What is sent | Model | Notes |
+|---|---|---|---|
+| `fabric` *(default)* | the fabric itself as `product_image`, with a prompt explaining it is cloth to be tailored | `tryon-max` | FASHN's own recommendation for fabric-to-garment. The model decides the garment's shape from the prompt. ~2 credits (balanced/1k), ~3 (quality). |
+| `template` | a flat-lay composed by tiling the fabric into an outfit silhouette | `tryon-v1.6` (`tryon-max` in quality mode) | No generative guesswork about the cut, and the cheapest path. The silhouette is ours, so it is only as good as the template. |
+| `edit` | the person as `image`, the fabric as `image_context` | `edit` | Alternative FASHN suggested; prompt does the dressing. |
+
+The prompt is load-bearing in `fabric` and `edit` mode — it is what stops the model
+treating a rectangle of cloth as a finished garment — so it is built from structured
+catalogue data in `prompts.py` rather than assembled at the call site.
 
 ---
 
@@ -118,8 +125,12 @@ missing (e.g. a volume was replaced) and reports uploaded images it cannot regen
 |---|---|---|
 | `FASHN_API_KEY` | — | **Server-side only.** Already used by the existing try-on proxy. |
 | `VTON_PROVIDER` | `fashn_api` | `fashn_api` · `mock` · `fashn_vton_15` |
-| `VTON_FAST_MODEL` | `tryon-v1.6` | Model for MODE A (cheapest; takes `category` + flat-lay hint) |
-| `VTON_QUALITY_MODEL` | `tryon-max` | Model for MODE B / quality runs (takes a prompt) |
+| `VTON_GARMENT_STRATEGY` | `fabric` | `fabric` · `template` · `edit` — how the garment reaches the model |
+| `VTON_FABRIC_MODEL` | `tryon-max` | Model for the `fabric` strategy |
+| `VTON_FAST_MODEL` | `tryon-v1.6` | Model for the `template` strategy in fast mode |
+| `VTON_QUALITY_MODEL` | `tryon-max` | Model for `template` in quality mode |
+| `VTON_EDIT_MODEL` | `edit` | Model for the `edit` strategy |
+| `VTON_RESOLUTION` | `1k` | `1k` · `2k` · `4k` — higher costs more credits |
 | `VTON_TIMEOUT_SECONDS` | `240` | Submit + poll budget per generation |
 | `FASHN_VTON15_URL` / `FASHN_VTON15_TOKEN` | — | Self-hosted inference server |
 | `SEGMENTATION_PROVIDER` | `noop` | `noop` · `remote` |
@@ -144,10 +155,13 @@ Implemented against the documented prediction API — one endpoint, poll for the
 * `GET  https://api.fashn.ai/v1/status/{id}` until `completed` / `failed`
 * `Authorization: Bearer $FASHN_API_KEY`; credits read from `x-fashn-credits-used`
 
-| Mode | Model | Inputs sent |
+| Strategy / mode | Model | Inputs sent |
 |---|---|---|
-| fast (default) | `tryon-v1.6` | `model_image`, `garment_image`, `category` (from the outfit), `garment_photo_type: "flat-lay"`, `mode`, `output_format` |
-| design / quality | `tryon-max` | `model_image`, `product_image`, `prompt`, `output_format` |
+| `fabric`, fast *(default)* | `tryon-max` | `model_image`, `product_image` (the fabric), `prompt`, `generation_mode: balanced`, `resolution`, `output_format` |
+| `fabric`, design | `tryon-max` | as above with `generation_mode: quality` and the customer's brief folded into the prompt |
+| `template`, fast | `tryon-v1.6` | `model_image`, `garment_image` (composed flat-lay), `category`, `garment_photo_type: "flat-lay"`, `mode`, `output_format` |
+| `template`, design | `tryon-max` | `model_image`, `product_image`, `prompt`, `generation_mode`, `resolution` |
+| `edit` | `edit` | `image` (person), `image_context` (fabric), `prompt`, `generation_mode`, `resolution` |
 
 Statuses map `starting`/`in_queue` → queued, `processing` → processing, `completed` →
 completed, `failed`/`canceled`/`time_out` → failed. Runtime errors (`PoseError`,
@@ -275,6 +289,19 @@ Roll back by setting `VTON_PROVIDER=fashn_api`.
 * **Segmentation is a stub by default.** `NoopSegmentationProvider` produces no masks;
   the try-on engine does its own human parsing. The interface, labels and a remote
   implementation are in place, but no parsing model runs locally today.
+* **The live `fabric` path has not been exercised against the real API from this
+  machine.** The sandbox this was built in blocks egress to `api.fashn.ai`
+  specifically (`github.com` and `cdn.fashn.ai` resolve; that host does not), and
+  moving the API key into the browser to work around it was not an acceptable
+  trade. The request shape follows the documented contract and FASHN support's
+  own guidance, and the whole pipeline is verified end to end against the mock —
+  but the first real run is still ahead. Run it with:
+
+      python3 tools/live_check.py path/to/person.jpg
+
+  It generates three combinations (bold print, solid, lace), prints model,
+  credits, timing and prompt for each, and saves the images. `--strategy template`
+  runs the same comparison through the composed-flat-lay path.
 * **`FashnVton15Provider` is untested against real hardware** (see §13).
 * **Seed swatches are rendered, not photographed.** They are honest, licence-clean stand-ins
   and good enough to prove and benchmark the pipeline; a production catalogue wants real
@@ -364,9 +391,10 @@ is a real storefront.
 
 1. Replace seed swatches with real fabric photography (admin upload or importer), starting
    with the fabrics that actually sell.
-2. Run a paid A/B pass: same person and outfit across ~20 fabrics on `tryon-v1.6` vs
-   `tryon-max`, and read the recorded `timings`/`creditsUsed` on the admin status endpoint
-   to fix the default model on evidence rather than assumption.
+2. Run `tools/live_check.py` on a real photo, then repeat with
+   `--strategy template`, and compare: fabric fidelity, garment shape, cost and
+   latency are all recorded per generation. That decides whether the default
+   strategy stays `fabric` or the composed template earns its place back.
 3. Add a real human-parsing provider behind `SEGMENTATION_PROVIDER=remote` and measure
    whether supplying masks improves edges enough to justify the call.
 4. Move generation onto a proper queue with webhooks (`POST /run?webhook_url=…`) instead of

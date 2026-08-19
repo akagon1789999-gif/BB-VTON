@@ -18,6 +18,12 @@
       "runtimeExecutable": "bash",
       "runtimeArgs": ["-c", "ADMIN_PASSWORD=test1234 PORT=8011 DATA_DIR=/tmp/bb-fabric-studio VTON_PROVIDER=mock FABRIC_STUDIO_DEBUG=true python3 server.py"],
       "port": 8011
+    },
+    {
+      "name": "fabric-studio-live",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "set -a; . ./.env; set +a; PORT=8012 python3 server.py"],
+      "port": 8012
     }
   ]
 }
