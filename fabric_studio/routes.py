@@ -449,18 +449,25 @@ def create_blueprint(admin_required):
 
 
 def _render_outfit_preview(outfit_id, upload=None):
-    """Use an uploaded preview if given, else render the template."""
+    """Use an uploaded photograph if given, else render the garment sketch."""
     record = catalog.require_outfit(outfit_id, include_inactive=True)
-    relative = "outfits/%s.jpg" % outfit_id
-    if upload and upload.filename:
+    custom = bool(upload and upload.filename)
+    relative = "outfits/%s.%s" % (outfit_id, "jpg" if custom else "png")
+    if custom:
         raw = upload.read(config.max_upload_bytes() + 1)
         image = imaging.open_image(raw)
         storage.write_media(relative, imaging.encode_image(imaging.fit_within(image, 900), "JPEG", 86))
     else:
         preview = garment_composer.render_preview(record["template_id"])
-        storage.write_media(relative, imaging.encode_image(preview, "JPEG", 86))
+        storage.write_media(relative, imaging.encode_image(preview, "PNG"))
+    previous = record.get("preview_image_path")
+    if previous and previous != relative:
+        storage.delete_media(previous)
     catalog.OUTFIT_STORE.update(outfit_id, {
         "preview_image_path": relative,
         "preview_image_url": storage.media_url(relative),
+        # A real photograph outranks the sketch and survives preview refreshes.
+        "preview_custom": custom,
+        "preview_version": garment_composer.PREVIEW_VERSION,
         "updated_at": catalog.now(),
     })

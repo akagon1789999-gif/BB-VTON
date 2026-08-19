@@ -1075,7 +1075,7 @@
       const card = document.createElement('div');
       card.className = 'item-card';
       card.innerHTML = `
-        <div class="thumb" style="background:#f7f6f3;"><img src="${outfit.previewImageUrl}" alt=""></div>
+        <div class="thumb" style="background:var(--surface-2);"><img src="${outfit.previewImageUrl}" alt=""></div>
         <div class="body">
           <div class="name">${escapeHtml(outfit.name)}</div>
           <div class="meta">${escapeHtml(outfit.category || '')} · ${escapeHtml(outfit.templateId || '')}</div>

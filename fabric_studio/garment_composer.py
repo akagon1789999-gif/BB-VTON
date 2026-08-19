@@ -161,22 +161,59 @@ def _paste_with_shadow(canvas, garment, mask):
 
 
 # ------------------------------------------------------- outfit previews -----
-def render_preview(template_id, palette=None):
-    """Neutral-fabric render used as the outfit catalogue preview image."""
-    from . import swatches
+PREVIEW_VERSION = 4
 
-    palette = palette or ["#b9a88c", "#cdbfa6"]
-    tile = swatches.render("solid", 512, palette[:1], texture="linen")
-    fabric = {"id": "preview", "processed": {"tilePath": None}}
-    params = garment_templates.get(template_id)
-    if params is None:
+# A technical flat sketch — the drawing convention the trade already uses for
+# "which cut is this?" — rather than a render of the garment in an invented
+# fabric. The stroke is a mid-tone so one file reads on both the cream and the
+# dark card, and the fill is barely there so the card colour shows through.
+# Tuned by eye against both card colours: any darker and the line vanishes on
+# the dark card, any more fill and it turns into a grey blob there.
+SKETCH_STROKE = (154, 148, 136)
+SKETCH_FILL_ALPHA = 14
+
+
+def render_preview(template_id, size=None):
+    """Neutral garment sketch used on the outfit cards.
+
+    Deliberately *not* the fabric-filled composite: the outfit catalogue asks
+    "which cut?", and dressing the answer in a fabric the customer did not pick
+    only muddles the question. An admin-uploaded photograph always wins over
+    this.
+    """
+    imaging.require_pillow()
+    if garment_templates.get(template_id) is None:
         raise ValidationError(detail="Unknown template %s" % template_id)
 
-    size = _canvas_size()
-    mask, shading, details = garment_templates.build(template_id, size)
-    fabric_layer = _tile_fabric(tile, size, params.get("pattern_scale", 0.42))
-    shaded = _apply_shading(fabric_layer, shading)
-    garment = imaging.Image.alpha_composite(shaded.convert("RGBA"), details)
-    garment.putalpha(mask)
-    canvas = imaging.Image.new("RGB", size, BACKGROUND)
-    return _paste_with_shadow(canvas, garment, mask)
+    width, height = size or _preview_size()
+    mask, _shading, details = garment_templates.build(template_id, (width, height))
+
+    stroke_width = max(1, int(round(width / 320.0)))
+    edge = mask.filter(imaging.ImageFilter.FIND_EDGES)
+    edge = edge.filter(imaging.ImageFilter.MaxFilter(3 if stroke_width < 2 else 5))
+    edge = edge.filter(imaging.ImageFilter.GaussianBlur(0.6))
+    outline = imaging.Image.new("RGBA", (width, height), SKETCH_STROKE + (255,))
+    outline.putalpha(edge.point(lambda v: min(255, int(v * 2.2))))
+
+    body = imaging.Image.new("RGBA", (width, height), SKETCH_STROKE + (SKETCH_FILL_ALPHA,))
+    body.putalpha(mask.point(lambda v: int(v * SKETCH_FILL_ALPHA / 255.0)))
+
+    seams = _strengthen(details)
+    return imaging.Image.alpha_composite(imaging.Image.alpha_composite(body, seams), outline)
+
+
+def _strengthen(details, factor=1.7):
+    """Bring the construction lines up so they survive at card size."""
+    numpy = imaging.numpy_module()
+    if numpy is None:
+        return details
+    array = numpy.asarray(details, dtype=numpy.float32).copy()
+    array[:, :, 3] = numpy.clip(array[:, :, 3] * factor, 0, 255)
+    return imaging.Image.fromarray(array.astype(numpy.uint8))
+
+
+def _preview_size():
+    long_edge = max(320, min(config.garment_render_size(), 720))
+    width, height = garment_templates.CANVAS
+    scale = long_edge / float(max(width, height))
+    return (max(48, int(width * scale)), max(48, int(height * scale)))

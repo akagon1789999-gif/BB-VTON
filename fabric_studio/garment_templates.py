@@ -14,7 +14,7 @@ import math
 
 from . import imaging
 
-TEMPLATE_VERSION = 3
+TEMPLATE_VERSION = 4
 
 CANVAS = (896, 1152)  # portrait 7:9 — the shape most try-on models expect
 
@@ -109,10 +109,10 @@ TEMPLATES = {
     }),
     "grand-agbada": dict(BASE, **{
         "label": "Grand Agbada",
-        "chest_half": 0.245, "waist_half": 0.255, "hem_half": 0.30, "hem_y": 0.86,
-        "sleeve_length": 0.30, "collar": "v", "buttons": 0, "placket": False,
+        "chest_half": 0.245, "waist_half": 0.255, "hem_half": 0.30, "hem_y": 0.84,
+        "sleeve_length": 0.26, "sleeve_angle": 20.0, "sleeve_top_half": 0.11,
+        "sleeve_cuff_half": 0.115, "collar": "v", "buttons": 0, "placket": False,
         "overlay": "agbada", "pattern_scale": 0.52,
-        "trousers": {"top_y": 0.80, "hem_y": 0.975, "leg_half": 0.072, "cuff_half": 0.062},
     }),
     "native-two-piece": dict(BASE, **{
         "label": "Native Two-Piece",
@@ -145,9 +145,9 @@ TEMPLATES = {
     }),
     "iro-and-buba": dict(BASE, **{
         "label": "Iro and Buba",
-        "chest_half": 0.225, "waist_half": 0.225, "hem_half": 0.235, "hem_y": 0.47,
-        "sleeve_angle": 44.0, "sleeve_length": 0.24, "sleeve_top_half": 0.095,
-        "sleeve_cuff_half": 0.088, "collar": "round", "placket": False, "buttons": 0,
+        "chest_half": 0.225, "waist_half": 0.23, "hem_half": 0.245, "hem_y": 0.46,
+        "sleeve_angle": 16.0, "sleeve_length": 0.12, "sleeve_top_half": 0.105,
+        "sleeve_cuff_half": 0.10, "collar": "round", "placket": False, "buttons": 0,
         "wrapper": True, "pattern_scale": 0.44,
     }),
     "skirt-and-blouse": dict(BASE, **{
@@ -312,19 +312,13 @@ def _draw_agbada_overlay(draw, params, width, height):
     top = params["shoulder_y"] * height + height * 0.02
     bottom = params["hem_y"] * height
     profile = _sample_profile([
-        (0.0, 0.20),
-        (0.16, 0.30),
-        (0.42, 0.415),
-        (0.72, 0.455),
-        (0.93, 0.44),
-        (1.0, 0.40),
+        (0.0, 0.21),
+        (0.10, 0.33),
+        (0.28, 0.44),
+        (0.55, 0.47),
+        (1.0, 0.47),
     ], 72)
     draw.polygon(_profile_polygon(profile, top, bottom, width), fill=255)
-    # Rounded hem corners.
-    draw.ellipse([0.5 * width - 0.44 * width, bottom - height * 0.05,
-                  0.5 * width - 0.30 * width, bottom + height * 0.02], fill=255)
-    draw.ellipse([0.5 * width + 0.30 * width, bottom - height * 0.05,
-                  0.5 * width + 0.44 * width, bottom + height * 0.02], fill=255)
 
 
 def _build_shading(mask, params, width, height):

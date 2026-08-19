@@ -185,6 +185,17 @@ importer, which record `source_url`, `source_name`, `license` and `attribution`.
 
 ## 7. Outfit catalogue
 
+Outfit cards show a **technical flat sketch** — the line drawing the trade uses
+for "which cut is this?" — rendered from the same silhouette the `template`
+strategy uses, in a neutral stroke, as a transparent PNG so one file reads on
+both the cream and the dark card. They are deliberately *not* the fabric-filled
+composite: the catalogue is asking which cut, and answering in a fabric the
+customer has not chosen only muddles the question.
+
+An admin-uploaded photograph always outranks the sketch (`preview_custom` on the
+record), and preview-refresh migrations skip those records. Real product
+photography is the intended end state; the sketch is what ships until then.
+
 11 predefined outfits — Men: Modern Senator, Classic Kaftan, Grand Agbada, Native
 Two-Piece, Long Tunic. Women: Ankara Gown, Long Gown, Iro and Buba, Skirt and Blouse,
 Peplum Top and Skirt, Bubu Boubou. Each row carries a `template_id` (the silhouette),

@@ -65,10 +65,10 @@ def migration_002_seed_outfits():
         record["is_active"] = True
         record["created_at"] = now()
         record["updated_at"] = now()
-        preview_relative = "outfits/%s.jpg" % record["id"]
+        preview_relative = "outfits/%s.png" % record["id"]
         try:
             preview = garment_composer.render_preview(record["template_id"])
-            storage.write_media(preview_relative, imaging.encode_image(preview, "JPEG", 86))
+            storage.write_media(preview_relative, imaging.encode_image(preview, "PNG"))
             record["preview_image_path"] = preview_relative
             record["preview_image_url"] = storage.media_url(preview_relative)
         except Exception as exc:  # pragma: no cover - preview is cosmetic
@@ -113,11 +113,49 @@ def migration_004_process_fabrics():
     return {"processed": processed, "failed": failed}
 
 
+def migration_005_refresh_outfit_previews():
+    """Re-render outfit previews after a change to the sketch style.
+
+    Skips any outfit whose preview an admin uploaded — a real photograph always
+    outranks a generated sketch.
+    """
+    from . import garment_composer
+
+    refreshed = 0
+    skipped = 0
+    for record in OUTFIT_STORE.all():
+        if record.get("preview_custom"):
+            skipped += 1
+            continue
+        template_id = record.get("template_id")
+        if not template_id:
+            continue
+        relative = "outfits/%s.png" % record["id"]
+        try:
+            preview = garment_composer.render_preview(template_id)
+            storage.write_media(relative, imaging.encode_image(preview, "PNG"))
+        except Exception as exc:  # pragma: no cover - preview is cosmetic
+            log.warning("Could not refresh preview for %s: %s", record["id"], exc)
+            continue
+        previous = record.get("preview_image_path")
+        if previous and previous != relative:
+            storage.delete_media(previous)
+        OUTFIT_STORE.update(record["id"], {
+            "preview_image_path": relative,
+            "preview_image_url": storage.media_url(relative),
+            "preview_version": garment_composer.PREVIEW_VERSION,
+            "updated_at": now(),
+        })
+        refreshed += 1
+    return {"refreshed": refreshed, "skippedCustom": skipped}
+
+
 MIGRATIONS = (
     ("001_media_tree", migration_001_media_tree),
     ("002_seed_outfits", migration_002_seed_outfits),
     ("003_seed_fabrics", migration_003_seed_fabrics),
     ("004_process_fabrics", migration_004_process_fabrics),
+    ("005_refresh_outfit_previews_v4", migration_005_refresh_outfit_previews),
 )
 
 
