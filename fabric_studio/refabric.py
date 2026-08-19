@@ -62,11 +62,20 @@ def usability(photo):
     elif coverage > 0.8:
         reasons.append("The garment couldn't be separated from the background. Try a plainer, more contrasting backdrop.")
 
-    metadata = analyze(photo)
+    metadata = analyze(_garment_crop(photo, mask))
     if metadata.get("patternDensity") in ("medium", "high") and metadata.get("patternType") not in ("solid", "textured"):
         reasons.append("This garment is already patterned. Use a plain garment so the new fabric reads cleanly.")
 
     return {"ok": not reasons, "reasons": reasons, "coverage": round(coverage, 3)}
+
+
+def _garment_crop(photo, mask):
+    """Crop to the garment's bounding box so the backdrop does not skew the
+    pattern reading."""
+    box = mask.point(lambda v: 255 if v > 127 else 0).getbbox()
+    if not box:
+        return photo
+    return photo.crop(box)
 
 
 def looks_like_a_person(photo):
