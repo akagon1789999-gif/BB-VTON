@@ -956,6 +956,16 @@
             <sc-if value="{{ fsFabricsEmpty }}" hint-placeholder-val="{{ false }}">
               <div style="text-align:center;padding:60px 20px;color:var(--text-3);font-size:13.5px;border:1px dashed rgba(var(--border-rgb),0.12);border-radius:16px;">No fabrics match those filters yet.</div>
             </sc-if>
+            <label style="display:flex;align-items:center;gap:14px;border:1px dashed rgba(var(--border-rgb),0.22);border-radius:14px;padding:14px 18px;margin-bottom:18px;cursor:pointer;background:var(--surface);">
+              <span style="width:40px;height:40px;border-radius:12px;background:var(--surface-2);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8"><path d="M12 3v12M7 8l5-5 5 5M5 21h14"/></svg>
+              </span>
+              <span style="flex:1;min-width:0;">
+                <span style="display:block;font-weight:600;font-size:14px;">Upload your own fabric</span>
+                <span style="display:block;font-size:12.5px;color:var(--text-3);">A photo of the cloth — Ankara, lace, aso-oke, anything</span>
+              </span>
+              <input type="file" accept="image/*" onChange="{{ fsFabricUploadChange }}" style="display:none;">
+            </label>
             <div class="vt-grid-3" style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;">
               <sc-for list="{{ fsFabrics }}" as="f" hint-placeholder-count="9">
                 <div style="background:var(--surface);border:1px solid {{ f.borderColor }};border-radius:14px;overflow:hidden;">
@@ -1001,6 +1011,16 @@
             <div style="padding:8px 18px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;background:{{ p.bg }};color:{{ p.color }};" onClick="{{ p.select }}">{{ p.label }}</div>
           </sc-for>
         </div>
+            <label style="display:flex;align-items:center;gap:14px;border:1px dashed rgba(var(--border-rgb),0.22);border-radius:14px;padding:14px 18px;margin:0 auto 18px;max-width:720px;cursor:pointer;background:var(--surface);">
+              <span style="width:40px;height:40px;border-radius:12px;background:var(--surface-2);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8"><path d="M12 3v12M7 8l5-5 5 5M5 21h14"/></svg>
+              </span>
+              <span style="flex:1;min-width:0;">
+                <span style="display:block;font-weight:600;font-size:14px;">Upload a garment reference</span>
+                <span style="display:block;font-size:12.5px;color:var(--text-3);">A flat-lay, or a photo of someone wearing the outfit you want</span>
+              </span>
+              <input type="file" accept="image/*" onChange="{{ fsGarmentUploadChange }}" style="display:none;">
+            </label>
         <div class="vt-grid-4" style="display:grid;grid-template-columns:repeat(4,1fr);gap:20px;">
           <sc-for list="{{ fsOutfits }}" as="o" hint-placeholder-count="8">
             <div style="background:var(--surface);border:1px solid {{ o.borderColor }};border-radius:14px;overflow:hidden;">
@@ -1046,7 +1066,7 @@
                 </div>
               </sc-if>
             </div>
-            <div style="color:var(--text-4);font-size:11.5px;text-align:center;margin-top:12px;line-height:1.5;">This is the garment we cut from your fabric — it goes to the AI with your photo.</div>
+            <div style="color:var(--text-4);font-size:11.5px;text-align:center;margin-top:12px;line-height:1.5;">{{ fsPreviewCaption }}</div>
           </div>
           <div style="background:var(--surface);border:1px solid rgba(var(--border-rgb),0.07);border-radius:16px;padding:22px;">
             <div style="display:flex;gap:14px;align-items:center;margin-bottom:16px;">
@@ -1079,12 +1099,10 @@
                 </div>
               </sc-for>
             </div>
-            <sc-if value="{{ fsIsDesignMode }}" hint-placeholder-val="{{ false }}">
-              <div style="margin-bottom:16px;">
-                <label style="display:block;font-size:11.5px;color:var(--text-3);margin-bottom:6px;">Describe the details you want</label>
-                <input type="text" value="{{ fsPrompt }}" onChange="{{ fsSetPrompt }}" placeholder="e.g. mandarin collar with subtle chest embroidery" style="width:100%;box-sizing:border-box;background:var(--surface-2);border:1px solid rgba(var(--border-rgb),0.1);color:var(--text);border-radius:10px;padding:11px 13px;font-size:13.5px;outline:none;">
-              </div>
-            </sc-if>
+            <div style="margin-bottom:16px;">
+              <label style="display:block;font-size:11.5px;color:var(--text-3);margin-bottom:6px;">Anything else? (optional)</label>
+              <input type="text" value="{{ fsPrompt }}" onChange="{{ fsSetPrompt }}" placeholder="e.g. keep the embroidery placement exactly as it is" style="width:100%;box-sizing:border-box;background:var(--surface-2);border:1px solid rgba(var(--border-rgb),0.1);color:var(--text);border-radius:10px;padding:11px 13px;font-size:13.5px;outline:none;">
+            </div>
 
             <div style="display:flex;flex-direction:column;gap:10px;">
               <button style="background:linear-gradient(180deg,var(--cta-from),var(--cta-to));color:var(--on-accent);border:none;border-radius:999px;padding:14px 20px;font-weight:700;font-size:14.5px;cursor:pointer;" onClick="{{ fsGenerate }}">Generate Outfit</button>
@@ -1362,10 +1380,12 @@ class Component extends DCLogic {
     fsFabricPattern: 'All',
     fsFabricColor: 'All',
     fsSelectedFabric: null,
+    fsFabricUpload: null,
     fsOutfits: [],
     fsOutfitCategories: [],
     fsOutfitCategory: 'All',
     fsSelectedOutfit: null,
+    fsGarmentUpload: null,
     fsPreviewUrl: null,
     fsPreviewLoading: false,
     fsMode: 'fast',
@@ -2006,17 +2026,55 @@ class Component extends DCLogic {
   fsSetOutfitCategory = (value) => this.setState({ fsOutfitCategory: value });
 
   fsSelectFabric = (fabric) => {
-    this.setState({ fsSelectedFabric: fabric, fsPreviewUrl: null, fsError: null });
+    this.setState({ fsSelectedFabric: fabric, fsFabricUpload: null, fsPreviewUrl: null, fsError: null });
   };
   fsSelectOutfit = (outfit) => {
-    this.setState({ fsSelectedOutfit: outfit, fsPreviewUrl: null, fsError: null });
+    this.setState({ fsSelectedOutfit: outfit, fsGarmentUpload: null, fsPreviewUrl: null, fsError: null });
+  };
+
+  // Uploads stand in for a catalogue pick: the rest of the flow only needs a
+  // name and a thumbnail, and the backend takes the image itself.
+  fsReadUpload = (file, onLoad) => {
+    if (!file || !file.type || !file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = () => onLoad(reader.result);
+    reader.readAsDataURL(file);
+  };
+  fsFabricUploadChange = (e) => {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = '';
+    this.fsReadUpload(file, (dataUrl) => this.setState({
+      fsFabricUpload: dataUrl,
+      fsSelectedFabric: { id: null, name: 'Your fabric', category: 'Uploaded', patternType: '', thumbnailUrl: dataUrl, isUpload: true },
+      fsPreviewUrl: null,
+      fsError: null,
+    }));
+  };
+  fsGarmentUploadChange = (e) => {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = '';
+    this.fsReadUpload(file, (dataUrl) => this.setState({
+      fsGarmentUpload: dataUrl,
+      fsSelectedOutfit: { id: null, name: 'Your garment', category: 'Uploaded', previewImageUrl: dataUrl, isUpload: true },
+      fsPreviewUrl: null,
+      fsError: null,
+    }));
   };
   fsSetMode = (mode) => this.setState({ fsMode: mode });
   fsSetPrompt = (e) => this.setState({ fsPrompt: e.target.value });
 
   fsLoadPreview = async () => {
-    const { fsSelectedFabric, fsSelectedOutfit } = this.state;
+    const { fsSelectedFabric, fsSelectedOutfit, fsGarmentUpload } = this.state;
     if (!fsSelectedFabric || !fsSelectedOutfit) return;
+    if (!fsSelectedFabric.id || !fsSelectedOutfit.id) {
+      // An uploaded fabric or garment has no catalogue composite; show the
+      // garment reference itself, which is what the studio starts from.
+      this.setState({
+        fsPreviewUrl: fsGarmentUpload || fsSelectedOutfit.previewImageUrl || fsSelectedFabric.thumbnailUrl,
+        fsPreviewLoading: false,
+      });
+      return;
+    }
     this.setState({ fsPreviewLoading: true, fsPreviewUrl: null });
     try {
       const params = new URLSearchParams({ fabricId: fsSelectedFabric.id, outfitId: fsSelectedOutfit.id });
@@ -2037,10 +2095,12 @@ class Component extends DCLogic {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           personImage: fsPersonPhoto,
-          fabricId: fsSelectedFabric.id,
-          outfitId: fsSelectedOutfit.id,
+          fabricId: fsSelectedFabric.id || undefined,
+          outfitId: fsSelectedOutfit.id || undefined,
+          fabricImage: this.state.fsFabricUpload || undefined,
+          garmentImage: this.state.fsGarmentUpload || undefined,
           mode: fsMode,
-          prompt: fsMode === 'design' ? fsPrompt : '',
+          prompt: fsPrompt,
         }),
       });
       this.setState({
@@ -2094,6 +2154,8 @@ class Component extends DCLogic {
   // Change one variable without restarting the workflow.
   fsTryAnotherFabric = () => this.setState({ fsStep: 2, fsResultUrl: null, fsPreviewUrl: null, fsError: null });
   fsTryAnotherOutfit = () => this.setState({ fsStep: 3, fsResultUrl: null, fsPreviewUrl: null, fsError: null });
+  fsClearFabricUpload = () => this.setState({ fsFabricUpload: null, fsSelectedFabric: null, fsPreviewUrl: null });
+  fsClearGarmentUpload = () => this.setState({ fsGarmentUpload: null, fsSelectedOutfit: null, fsPreviewUrl: null });
   fsGenerateAgain = () => this.fsGenerate();
 
   renderVals() {
@@ -2247,6 +2309,14 @@ class Component extends DCLogic {
         select: () => this.fsSetMode(mode.id),
       };
     });
+
+    // The preview means different things depending on where the garment came
+    // from, so it says which.
+    const fsUsesReference = !!(s.fsGarmentUpload
+      || (s.fsSelectedOutfit && s.fsSelectedOutfit.hasReferencePhoto));
+    const fsPreviewCaption = fsUsesReference
+      ? 'Your garment reference. The studio remakes it in your fabric, then fits it to your photo.'
+      : 'This is the garment we cut from your fabric — it goes to the AI with your photo.';
 
     const fsSummaryLine = (s.fsSelectedFabric && s.fsSelectedOutfit)
       ? (s.fsSelectedOutfit.name + ' in ' + s.fsSelectedFabric.name)
@@ -2421,6 +2491,12 @@ class Component extends DCLogic {
       fsToFabrics: this.fsToFabrics,
       fsToOutfits: this.fsToOutfits,
       fsToPreview: this.fsToPreview,
+      fsFabricUploadChange: this.fsFabricUploadChange,
+      fsGarmentUploadChange: this.fsGarmentUploadChange,
+      fsHasFabricUpload: !!s.fsFabricUpload,
+      fsHasGarmentUpload: !!s.fsGarmentUpload,
+      fsClearFabricUpload: this.fsClearFabricUpload,
+      fsClearGarmentUpload: this.fsClearGarmentUpload,
       fsFabrics,
       fsFabricCount: s.fsFabricTotal,
       fsFabricsLoading: s.fsFabricsLoading,
@@ -2436,6 +2512,7 @@ class Component extends DCLogic {
       fsSelectedOutfitPreview: s.fsSelectedOutfit ? s.fsSelectedOutfit.previewImageUrl : '',
       fsSelectedOutfitCategory: s.fsSelectedOutfit ? s.fsSelectedOutfit.category : '',
       fsPreviewUrl: s.fsPreviewUrl,
+      fsPreviewCaption,
       fsHasPreview: !!s.fsPreviewUrl,
       fsPreviewLoading: s.fsPreviewLoading,
       fsModeOptions,

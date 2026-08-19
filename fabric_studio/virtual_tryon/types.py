@@ -58,6 +58,36 @@ class TryOnRequest(object):
         }
 
 
+class GarmentRemakeRequest(object):
+    """Inputs for step one: remake a garment in a different fabric.
+
+        fabric image + garment reference  ->  the same garment, new cloth
+
+    The garment reference may be a flat-lay or a photo of someone wearing the
+    outfit; the engine keeps the cut and replaces the material. The result is
+    a garment image, not a try-on, and is cached by the caller so a fabric and
+    garment pairing is only ever remade once.
+    """
+
+    def __init__(self, garment_image, fabric_image, prompt=None, options=None, request_id=None):
+        self.garment_image = garment_image
+        self.fabric_image = fabric_image
+        self.prompt = (prompt or "").strip()
+        self.options = dict(options or {})
+        self.request_id = request_id
+
+    @property
+    def mode(self):
+        return self.options.get("mode") or "fast"
+
+    def summary(self):
+        return {
+            "mode": self.mode,
+            "hasPrompt": bool(self.prompt),
+            "requestId": self.request_id,
+        }
+
+
 # Terminal and non-terminal statuses used across every provider.
 STATUS_QUEUED = "queued"
 STATUS_PROCESSING = "processing"

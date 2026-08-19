@@ -62,6 +62,30 @@ def describe_garment(outfit):
     return "a %s" % name.lower() if name else GARMENT_FALLBACK
 
 
+# The instruction the whole two-step pipeline turns on: keep the garment,
+# change only what it is made of.
+REMAKE_INSTRUCTION = (
+    "Replace the garment material with the fabric shown in the reference image. "
+    "Preserve the exact garment design, cut, embroidery placement and silhouette."
+)
+
+
+def build_remake_prompt(outfit, fabric, user_prompt=None):
+    """Prompt for step one: the garment reference re-made in the new fabric."""
+    sentences = [REMAKE_INSTRUCTION]
+    described = describe_fabric(fabric)
+    if described and described != "the fabric shown":
+        sentences.append("The fabric is %s." % described)
+    sentences.append(
+        "Match the fabric's colours, motif shapes and scale, follow the garment's existing "
+        "folds and seams, and leave the background, lighting and framing unchanged."
+    )
+    extra = _sentence(user_prompt)
+    if extra:
+        sentences.append(extra)
+    return _clip(" ".join(sentences))
+
+
 def build_composite_prompt(outfit, fabric, user_prompt=None):
     """Prompt for the composite strategy.
 

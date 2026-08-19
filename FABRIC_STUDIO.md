@@ -29,11 +29,23 @@ USER ──┬── person photo ───────────────�
 **How the garment reaches the model** is a strategy, set by
 `VTON_GARMENT_STRATEGY`:
 
-    person + garment template + fabric swatch  ->  tryon-max
+    fabric image + garment reference  ->  AI generated garment  ->  person wearing it
+
+Step one hands the garment reference and the fabric to `edit` — "replace the
+garment material with the fabric shown, preserve the design, cut, embroidery
+placement and silhouette" — and step two puts the result on the customer with
+`tryon-max`. The garment reference may be a flat-lay *or a photo of someone
+wearing the outfit*, which is what local compositing could never handle.
+
+**Step one is cached** by (fabric content, garment content, prompt, model). The
+first customer to pick a pairing pays for the remake; everyone after them goes
+straight to the try-on. Without that cache the two-step approach would cost
+credits on every visit.
 
 | Strategy | What is sent as the product image | Model | Notes |
 |---|---|---|---|
-| `composite` *(default)* | the outfit template filled with the chosen fabric — one flat-lay carrying both the cut and the cloth | `tryon-max` | The intended workflow. ~2 credits (balanced/1k), ~3 (quality). |
+| `remake` *(default)* | the garment reference remade in the chosen fabric (step one), then worn (step two) | `edit` → `tryon-max` | Falls back to `composite` when an outfit has no reference photo or the engine cannot remake. |
+| `composite` | the outfit template filled with the chosen fabric — one flat-lay carrying both the cut and the cloth | `tryon-max` | ~2 credits (balanced/1k), ~3 (quality). |
 | `fabric` | the bare fabric swatch; the garment exists only in the prompt | `tryon-max` | FASHN's suggestion when you have no garment reference at all. |
 | `template` | the composite, on the cheap legacy model | `tryon-v1.6` | Takes a `category` and a flat-lay hint instead of a prompt. Cheapest. |
 | `edit` | the person as `image`, the fabric as `image_context` | `edit` | The other approach FASHN suggested. |
@@ -101,6 +113,20 @@ catalogue data in `prompts.py` rather than assembled at the call site.
 `test_importer.py`, `test_migrations.py` — 111 tests.
 
 **Docs**: `FABRIC_STUDIO.md` (this file).
+
+### Inputs
+
+Fabric and garment may each come from the catalogue or from the customer:
+
+| Input | Catalogue | Uploaded |
+|---|---|---|
+| Fabric | `fabricId` | `fabricImage` — any cloth photo; analysed for colour and pattern like a catalogue fabric |
+| Garment | `outfitId` | `garmentImage` — flat-lay, or a photo of someone wearing the outfit |
+| Instruction | — | `prompt` — optional, folded into step one's brief |
+
+Uploads are stored under `media/uploads` keyed by content hash, so the same
+photo uploaded twice is processed once. They never enter the catalogue: an
+admin adds a fabric deliberately, through the admin tools.
 
 ## 2. Files modified
 

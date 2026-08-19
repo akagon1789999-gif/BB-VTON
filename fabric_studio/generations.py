@@ -2,10 +2,9 @@
 
     person photo -> validate/normalise
                  -> processed fabric (cached)
-                 -> garment brief: the outfit template filled with the chosen
-                    fabric, as one flat-lay (default), or the bare swatch with
-                    the garment described in the prompt
-                    (VTON_GARMENT_STRATEGY=fabric)
+                 -> garment: the garment reference remade in the chosen fabric
+                    by the engine and cached (default), or composited locally
+                    from the outfit template
                  -> segmentation hook (no-op by default)
                  -> VirtualTryOnProvider.generate + poll
                  -> store result -> history record
@@ -20,7 +19,9 @@ import time
 import urllib.error
 import urllib.request
 
-from . import catalog, config, garment_composer, imaging, prompts, segmentation, storage
+from . import (
+    catalog, config, garment_composer, garment_remake, imaging, prompts, segmentation, storage,
+)
 from .errors import FabricStudioError, ProviderError, ValidationError, log, log_exception
 from .virtual_tryon import STATUS_COMPLETED, STATUS_FAILED, TryOnRequest, get_provider
 
@@ -34,6 +35,7 @@ GENERATION_STORE = storage.JsonStore(
 STAGE_QUEUED = "queued"
 STAGE_FABRIC = "preparing_fabric"
 STAGE_GARMENT = "composing_garment"
+STAGE_REMAKE = "making_garment"
 STAGE_SEGMENT = "reading_photo"
 STAGE_SUBMIT = "submitting"
 STAGE_RENDER = "rendering"
@@ -45,6 +47,7 @@ STAGE_LABELS = {
     STAGE_QUEUED: "Getting ready…",
     STAGE_FABRIC: "Preparing fabric…",
     STAGE_GARMENT: "Cutting your outfit…",
+    STAGE_REMAKE: "Making your outfit in that fabric…",
     STAGE_SEGMENT: "Reading your photo…",
     STAGE_SUBMIT: "Sending to the studio…",
     STAGE_RENDER: "Fitting the outfit…",
@@ -68,11 +71,19 @@ def now():
 
 # ------------------------------------------------------------------- API ----
 def start_generation(person_image, fabric_id, outfit_id, user_id, mode=MODE_FAST,
-                     prompt=None, options=None, run_async=True):
-    """Validate inputs, create the history record, and kick off the pipeline."""
+                     prompt=None, options=None, run_async=True,
+                     fabric_upload=None, garment_upload=None):
+    """Validate inputs, create the history record, and kick off the pipeline.
+
+    Fabric and garment may each come from the catalogue (by id) or from the
+    customer (an uploaded photo). Uploads are processed and cached by content
+    hash but never enter the catalogue.
+    """
     imaging.require_pillow()
-    fabric = catalog.require_fabric(fabric_id)
-    outfit = catalog.require_outfit(outfit_id)
+    from . import uploads
+
+    fabric = uploads.store_fabric(fabric_upload) if fabric_upload else catalog.require_fabric(fabric_id)
+    outfit = uploads.store_garment(garment_upload) if garment_upload else catalog.require_outfit(outfit_id)
     mode = MODE_DESIGN if mode == MODE_DESIGN else MODE_FAST
 
     prompt = (prompt or "").strip()[:500]
@@ -81,6 +92,14 @@ def start_generation(person_image, fabric_id, outfit_id, user_id, mode=MODE_FAST
         prompt = ""
 
     person_data_url, photo_report = segmentation.validator.prepare(person_image)
+
+    # Uploaded records live only for this generation, so the pipeline is handed
+    # the records themselves rather than re-reading them by id.
+    ephemeral = {}
+    if fabric.get("is_upload"):
+        ephemeral["fabric"] = fabric
+    if outfit.get("is_upload"):
+        ephemeral["outfit"] = outfit
 
     record = {
         "id": storage.new_id("gen"),
@@ -115,13 +134,15 @@ def start_generation(person_image, fabric_id, outfit_id, user_id, mode=MODE_FAST
     if run_async:
         thread = threading.Thread(
             target=_run_pipeline,
-            args=(record["id"], person_data_url, fabric["id"], outfit["id"], mode, prompt, dict(options or {})),
+            args=(record["id"], person_data_url, fabric["id"], outfit["id"], mode, prompt,
+                  dict(options or {}), ephemeral),
             name="fabric-studio-%s" % record["id"],
             daemon=True,
         )
         thread.start()
     else:
-        _run_pipeline(record["id"], person_data_url, fabric["id"], outfit["id"], mode, prompt, dict(options or {}))
+        _run_pipeline(record["id"], person_data_url, fabric["id"], outfit["id"], mode, prompt,
+                      dict(options or {}), ephemeral)
     return GENERATION_STORE.get(record["id"])
 
 
@@ -199,7 +220,8 @@ def _set_stage(generation_id, stage, **extra):
     GENERATION_STORE.update(generation_id, updates)
 
 
-def _run_pipeline(generation_id, person_data_url, fabric_id, outfit_id, mode, prompt, options):
+def _run_pipeline(generation_id, person_data_url, fabric_id, outfit_id, mode, prompt, options,
+                  ephemeral=None):
     started = time.time()
     timings = {}
     with _slots:
@@ -207,19 +229,25 @@ def _run_pipeline(generation_id, person_data_url, fabric_id, outfit_id, mode, pr
             # 1. Fabric: reuse the cached processed asset whenever possible.
             _set_stage(generation_id, STAGE_FABRIC)
             step = time.time()
-            fabric = catalog.ensure_fabric_processed(fabric_id)
+            ephemeral = ephemeral or {}
+            fabric = ephemeral.get("fabric") or catalog.ensure_fabric_processed(fabric_id)
             timings["fabricMs"] = int((time.time() - step) * 1000)
 
             # 2. Garment brief: either the cloth itself plus a prompt that
             #    describes the outfit, or a flat-lay composed from a template.
             _set_stage(generation_id, STAGE_GARMENT)
             step = time.time()
-            outfit = catalog.require_outfit(outfit_id)
+            outfit = ephemeral.get("outfit") or catalog.require_outfit(outfit_id)
             strategy = (options or {}).get("strategy") or config.vton_garment_strategy()
-            garment = _build_garment_brief(strategy, fabric, outfit, prompt)
+            if strategy == "remake":
+                _set_stage(generation_id, STAGE_REMAKE)
+            garment = _build_garment_brief(strategy, fabric, outfit, prompt, mode)
+            strategy = garment.get("source") or strategy
             timings["garmentMs"] = int((time.time() - step) * 1000)
             timings["garmentCached"] = garment.get("cached", False)
             timings["strategy"] = strategy
+            if garment.get("remakeMs") is not None:
+                timings["remakeMs"] = garment["remakeMs"]
 
             # 3. Person: segmentation hook (no-op unless a parser is configured).
             _set_stage(generation_id, STAGE_SEGMENT)
@@ -263,6 +291,9 @@ def _run_pipeline(generation_id, person_data_url, fabric_id, outfit_id, mode, pr
             metadata.update({
                 "strategy": strategy,
                 "builtPrompt": garment["prompt"],
+                "remakePrompt": garment.get("remakePrompt"),
+                "remakeCached": garment.get("cached") if strategy == "remake" else None,
+                "remakeCredits": garment.get("remakeCredits"),
                 "garmentImageUrl": garment["url"],
                 "garmentCached": garment.get("cached", False),
                 "model": result.metadata.get("model"),
@@ -289,7 +320,49 @@ def _run_pipeline(generation_id, person_data_url, fabric_id, outfit_id, mode, pr
                   timings, started, code="unexpected_error")
 
 
-def _build_garment_brief(strategy, fabric, outfit, user_prompt):
+def _remake_reference(fabric, outfit, user_prompt, mode):
+    """Step one: the engine remakes the garment reference in this fabric.
+
+    Returns None when it cannot run — no reference photo, or an engine that
+    cannot remake — so the caller composites locally instead.
+    """
+    reference = (outfit or {}).get("reference_image_path")
+    if not reference:
+        return None
+    from .virtual_tryon import get_provider
+    if not get_provider().supports_garment_remake:
+        return None
+
+    processed = (fabric.get("processed") or {})
+    fabric_relative = processed.get("normalizedPath")
+    if not fabric_relative:
+        return None
+    try:
+        garment_bytes = storage.media_path(reference).read_bytes()
+        fabric_bytes = storage.media_path(fabric_relative).read_bytes()
+    except (ValueError, OSError):
+        return None
+
+    remade = garment_remake.remake(
+        fabric_image=imaging.to_data_url(fabric_bytes, "JPEG"),
+        garment_image=imaging.to_data_url(garment_bytes, "JPEG"),
+        fabric_hash=imaging.content_hash(fabric_bytes),
+        garment_hash=imaging.content_hash(garment_bytes),
+        fabric=fabric, outfit=outfit, user_prompt=user_prompt, mode=mode,
+    )
+    return {
+        "image": _data_url_for_media(remade["path"]),
+        "url": remade["url"],
+        "cached": remade["cached"],
+        "prompt": prompts.build_composite_prompt(outfit, fabric, user_prompt),
+        "remakePrompt": remade["prompt"],
+        "remakeMs": remade["ms"],
+        "remakeCredits": remade.get("creditsUsed"),
+        "source": "remake",
+    }
+
+
+def _build_garment_brief(strategy, fabric, outfit, user_prompt, mode="fast"):
     """What the model receives as the garment, and the prompt that explains it.
 
     FASHN confirmed `tryon-max` can tailor a garment from a length of cloth
@@ -297,6 +370,14 @@ def _build_garment_brief(strategy, fabric, outfit, user_prompt):
     composed template remains available: it costs no generative guesswork about
     the garment's shape and is cheaper on `tryon-v1.6`.
     """
+    if strategy == "remake":
+        remade = _remake_reference(fabric, outfit, user_prompt, mode)
+        if remade is not None:
+            return remade
+        # No usable reference or an engine that cannot remake: composite locally
+        # rather than failing the customer's generation.
+        strategy = "composite"
+
     if strategy in ("composite", "template"):
         composed = garment_composer.compose(fabric, outfit)
         builder = (prompts.build_composite_prompt if strategy == "composite"
@@ -306,6 +387,7 @@ def _build_garment_brief(strategy, fabric, outfit, user_prompt):
             "url": composed["url"],
             "cached": composed["cached"],
             "prompt": builder(outfit, fabric, user_prompt),
+            "source": "composite",
         }
 
     processed = (fabric.get("processed") or {})
@@ -321,6 +403,7 @@ def _build_garment_brief(strategy, fabric, outfit, user_prompt):
         "url": storage.media_url(relative),
         "cached": True,
         "prompt": builder(outfit, fabric, user_prompt),
+        "source": "fabric",
     }
 
 

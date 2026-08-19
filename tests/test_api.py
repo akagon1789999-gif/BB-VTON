@@ -275,6 +275,7 @@ class GarmentStrategyTest(ApiTestCase):
         base = {"personImage": context.person_data_url(),
                 "fabricId": "fab_api", "outfitId": "out_api"}
         base.update(payload)
+        base = {k: v for k, v in base.items() if v is not None}
         status, body = self.post_json("/api/fabric-studio/generate", base)
         self.assertEqual(status, 202)
         deadline = time.time() + 20
@@ -327,3 +328,115 @@ class GarmentStrategyTest(ApiTestCase):
         self.assertEqual(record["metadata"]["strategy"], "composite")
         self.assertIn("already made in the customer's chosen fabric",
                       record["metadata"]["builtPrompt"])
+
+
+class GarmentRemakeTest(GarmentStrategyTest):
+    """Two-step: remake the garment reference in the fabric, then wear it."""
+
+    def _attach_reference(self):
+        photo = imaging.Image.new("RGB", (600, 800), (18, 18, 22))
+        from PIL import ImageDraw
+        ImageDraw.Draw(photo).rounded_rectangle([150, 120, 450, 700], radius=40,
+                                                fill=(178, 176, 170))
+        relative = "outfits/out_api-reference.jpg"
+        storage.write_media(relative, imaging.encode_image(photo, "JPEG", 92))
+        outfit = catalog.get_outfit("out_api")
+        catalog.save_outfit(dict(outfit, reference_image_path=relative))
+
+    def test_a_reference_photo_is_remade_in_the_fabric_then_worn(self):
+        self._attach_reference()
+        request, final = self._capture_request({})
+        self.assertEqual(final["status"], "completed")
+        record = GENERATION_STORE.get(final["generationId"])
+        meta = record["metadata"]
+        self.assertEqual(meta["strategy"], "remake")
+        # Step one's instruction is the one that matters for fabric fidelity.
+        self.assertIn("Replace the garment material", meta["remakePrompt"])
+        self.assertIn("Preserve the exact garment design", meta["remakePrompt"])
+        # Step two receives the remade garment, not the raw reference.
+        self.assertIn("garmentImageUrl", meta)
+        self.assertIn("remade-", meta["garmentImageUrl"])
+
+    def test_the_remake_is_cached_across_generations(self):
+        self._attach_reference()
+        _r1, first = self._capture_request({})
+        _r2, second = self._capture_request({})
+        first_meta = GENERATION_STORE.get(first["generationId"])["metadata"]
+        second_meta = GENERATION_STORE.get(second["generationId"])["metadata"]
+        self.assertFalse(first_meta["remakeCached"])
+        self.assertTrue(second_meta["remakeCached"])
+        self.assertEqual(first_meta["garmentImageUrl"], second_meta["garmentImageUrl"])
+
+    def test_without_a_reference_it_falls_back_to_compositing(self):
+        request, final = self._capture_request({})
+        self.assertEqual(final["status"], "completed")
+        record = GENERATION_STORE.get(final["generationId"])
+        self.assertEqual(record["metadata"]["strategy"], "composite")
+
+    def test_the_customer_brief_reaches_step_one(self):
+        self._attach_reference()
+        _request, final = self._capture_request(
+            {"mode": "design", "prompt": "keep the collar embroidery in gold"})
+        meta = GENERATION_STORE.get(final["generationId"])["metadata"]
+        self.assertIn("Keep the collar embroidery in gold.", meta["remakePrompt"])
+
+
+class UploadedInputsTest(GarmentStrategyTest):
+    """Customers can bring their own fabric and their own garment reference."""
+
+    def _fabric_photo(self):
+        from fabric_studio import swatches
+        return imaging.to_data_url(swatches.render("geometric", 520, ["#123a75", "#c62f2f", "#d8a63c"]))
+
+    def _garment_photo(self):
+        photo = imaging.Image.new("RGB", (600, 800), (18, 18, 22))
+        from PIL import ImageDraw
+        ImageDraw.Draw(photo).rounded_rectangle([150, 120, 450, 700], radius=40, fill=(178, 176, 170))
+        return imaging.to_data_url(photo)
+
+    def test_an_uploaded_fabric_is_analysed_and_used(self):
+        request, final = self._capture_request(
+            {"fabricId": None, "fabricImage": self._fabric_photo()})
+        self.assertEqual(final["status"], "completed")
+        record = GENERATION_STORE.get(final["generationId"])
+        self.assertTrue(record["fabric_id"].startswith("upload_"))
+        # It went through the same analysis as a catalogue fabric.
+        self.assertIn("deep blue", request.prompt.lower())
+
+    def test_an_uploaded_garment_reference_is_remade(self):
+        _request, final = self._capture_request(
+            {"outfitId": None, "garmentImage": self._garment_photo()})
+        self.assertEqual(final["status"], "completed")
+        meta = GENERATION_STORE.get(final["generationId"])["metadata"]
+        self.assertEqual(meta["strategy"], "remake")
+        self.assertIn("Replace the garment material", meta["remakePrompt"])
+
+    def test_both_uploaded_together_with_an_instruction(self):
+        _request, final = self._capture_request({
+            "fabricId": None, "outfitId": None,
+            "fabricImage": self._fabric_photo(),
+            "garmentImage": self._garment_photo(),
+            "mode": "design",
+            "prompt": "keep the embroidery placement exactly",
+        })
+        self.assertEqual(final["status"], "completed")
+        meta = GENERATION_STORE.get(final["generationId"])["metadata"]
+        self.assertIn("Keep the embroidery placement exactly.", meta["remakePrompt"])
+
+    def test_uploads_never_enter_the_catalogue(self):
+        before = catalog.search_fabrics()["total"]
+        self._capture_request({"fabricId": None, "fabricImage": self._fabric_photo()})
+        self.assertEqual(catalog.search_fabrics()["total"], before)
+
+    def test_the_same_upload_is_only_processed_once(self):
+        photo = self._fabric_photo()
+        _r1, first = self._capture_request({"fabricId": None, "fabricImage": photo})
+        _r2, second = self._capture_request({"fabricId": None, "fabricImage": photo})
+        self.assertEqual(GENERATION_STORE.get(first["generationId"])["fabric_id"],
+                         GENERATION_STORE.get(second["generationId"])["fabric_id"])
+
+    def test_missing_both_id_and_upload_is_rejected(self):
+        status, body = self.post_json("/api/fabric-studio/generate", {
+            "personImage": context.person_data_url(), "outfitId": "out_api"})
+        self.assertEqual(status, 400)
+        self.assertIn("fabric", body["message"])

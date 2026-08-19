@@ -55,6 +55,7 @@ MAX_PROMPT_CHARS = 900
 class FashnApiProvider(VirtualTryOnProvider):
     name = "fashn_api"
     supports_prompt = True
+    supports_garment_remake = True
 
     def __init__(self, api_key=None, api_base=None):
         self._api_key = api_key
@@ -183,6 +184,47 @@ class FashnApiProvider(VirtualTryOnProvider):
                 "mode": request.mode,
                 "creditsUsed": _credits(headers),
             },
+        )
+
+    def remake_garment(self, request):
+        """Step one, on the `edit` model.
+
+        `image` is the garment reference — flat-lay or worn — and
+        `image_context` is the fabric; the prompt says to swap the material and
+        keep everything else. The output is a garment image, which step two
+        then puts on the customer.
+        """
+        model_name = config.vton_edit_model()
+        inputs = {
+            "image": request.garment_image,
+            "image_context": request.fabric_image,
+            "prompt": (request.prompt or "")[:MAX_PROMPT_CHARS],
+            "generation_mode": "quality" if request.mode == "quality" else "balanced",
+            "resolution": request.options.get("resolution") or config.vton_resolution(),
+            "output_format": request.options.get("output_format", "jpeg"),
+        }
+        if not inputs["prompt"]:
+            raise ProviderError(detail="Garment remake requires a prompt; none was built.")
+        if request.options.get("seed") is not None:
+            inputs["seed"] = int(request.options["seed"])
+
+        status_code, body, headers = request_json(
+            "%s/run" % self.api_base,
+            method="POST",
+            payload={"model_name": model_name, "inputs": inputs},
+            headers=self._headers(),
+            timeout=config.vton_timeout_seconds(),
+        )
+        if status_code >= 400:
+            raise self._api_error(status_code, body)
+        prediction_id = (body or {}).get("id")
+        if not prediction_id:
+            raise ProviderError(detail="FASHN /run returned no prediction id: %s" % body)
+        return TryOnResult(
+            status=STATUS_QUEUED,
+            provider=self.name,
+            generation_id=prediction_id,
+            metadata={"model": model_name, "step": "remake", "creditsUsed": _credits(headers)},
         )
 
     def get_status(self, generation_id):

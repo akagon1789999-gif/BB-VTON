@@ -20,6 +20,7 @@ atexit.register(lambda: shutil.rmtree(DATA_DIR, ignore_errors=True))
 from fabric_studio import catalog, imaging, storage, swatches  # noqa: E402
 from fabric_studio.catalog import FABRIC_STORE, OUTFIT_STORE  # noqa: E402
 from fabric_studio.fabric_processor import processor  # noqa: E402
+from fabric_studio.garment_remake import _index as REMAKE_INDEX  # noqa: E402
 from fabric_studio.generations import GENERATION_STORE  # noqa: E402
 
 storage.ensure_dirs()
@@ -81,3 +82,6 @@ def reset_stores():
     FABRIC_STORE.replace_all([])
     OUTFIT_STORE.replace_all([])
     GENERATION_STORE.replace_all([])
+    # The remake cache is keyed by content, so it would otherwise carry across
+    # tests and make the first generation of a test look like a cache hit.
+    REMAKE_INDEX.replace_all([])

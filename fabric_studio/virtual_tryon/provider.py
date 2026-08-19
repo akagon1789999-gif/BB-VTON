@@ -14,7 +14,7 @@ import threading
 
 from .. import config
 from ..errors import ProviderConfigError
-from .types import TryOnRequest, TryOnResult  # noqa: F401  (re-exported)
+from .types import GarmentRemakeRequest, TryOnRequest, TryOnResult  # noqa: F401
 
 
 class VirtualTryOnProvider(object):
@@ -22,6 +22,10 @@ class VirtualTryOnProvider(object):
 
     name = "abstract"
     supports_prompt = False
+    # Whether the engine can remake a garment in a new fabric (step one of the
+    # two-step pipeline). Engines that cannot are still usable: the pipeline
+    # composites locally instead.
+    supports_garment_remake = False
 
     def generate(self, request):
         """Submit a generation. Returns a TryOnResult (usually non-terminal)."""
@@ -30,6 +34,13 @@ class VirtualTryOnProvider(object):
     def get_status(self, generation_id):
         """Poll a previously submitted generation."""
         raise NotImplementedError
+
+    def remake_garment(self, request):
+        """Remake a garment in a new fabric. Returns a TryOnResult whose
+        result_image is the new *garment*, not a person wearing it."""
+        raise NotImplementedError(
+            "%s cannot remake garments; composite the fabric locally instead" % self.name
+        )
 
     def is_configured(self):
         """False when required credentials/URLs are missing."""
@@ -40,6 +51,7 @@ class VirtualTryOnProvider(object):
             "provider": self.name,
             "configured": self.is_configured(),
             "supportsPrompt": self.supports_prompt,
+            "supportsGarmentRemake": self.supports_garment_remake,
         }
 
 

@@ -149,19 +149,21 @@ def debug_errors():
 
 # ------------------------------------------------------------- strategies ---
 # How the garment reaches the try-on model:
-#   composite - the outfit template filled with the chosen fabric, sent as one
-#               flat-lay product image (the intended workflow: person + garment
-#               template + fabric swatch -> tryon-max)
+#   remake    - two steps: the garment reference is remade in the chosen fabric
+#               (edit), then worn by the customer (tryon-max). The only route
+#               that works from a photo of someone wearing the outfit.
+#   composite - the outfit template filled with the chosen fabric locally, sent
+#               as one flat-lay product image
 #   fabric    - the bare fabric swatch as the product image, with the garment
 #               described only in the prompt
 #   template  - the composite on the cheap legacy model (tryon-v1.6)
 #   edit      - the person as the image and the fabric as image_context
-STRATEGIES = ("composite", "fabric", "template", "edit")
+STRATEGIES = ("remake", "composite", "fabric", "template", "edit")
 
 
 def vton_garment_strategy():
-    value = _env("VTON_GARMENT_STRATEGY", "composite").lower()
-    return value if value in STRATEGIES else "composite"
+    value = _env("VTON_GARMENT_STRATEGY", "remake").lower()
+    return value if value in STRATEGIES else "remake"
 
 
 # The flagship try-on model, used by every strategy except `template` (cheap)

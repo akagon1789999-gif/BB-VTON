@@ -6,6 +6,7 @@ from .provider import (  # noqa: F401
     reset_providers,
 )
 from .types import (  # noqa: F401
+    GarmentRemakeRequest,
     STATUS_COMPLETED,
     STATUS_FAILED,
     STATUS_PROCESSING,
