@@ -14,7 +14,7 @@ generations of the same pairing reuse one asset.
 """
 import time
 
-from . import config, garment_templates, imaging, storage
+from . import config, garment_templates, imaging, refabric, storage
 from .errors import ValidationError
 
 COMPOSER_VERSION = 3
@@ -68,7 +68,44 @@ def compose(fabric, outfit, force=False):
 
 
 def render(fabric, outfit):
-    """Compose the garment image (no caching, no disk writes)."""
+    """Compose the garment image (no caching, no disk writes).
+
+    A reference photograph of the real garment beats the vector template — it
+    brings real folds and seams — but only when it can actually be masked, so
+    refabric.usability() decides. Anything it rejects falls back to the
+    template rather than being mangled.
+    """
+    reference = (outfit or {}).get("reference_image_path")
+    if reference:
+        try:
+            return _render_from_reference(fabric, outfit, reference)
+        except ValidationError:
+            raise
+        except Exception as exc:
+            from .errors import log
+            log.warning("Reference re-fabric failed for %s, using the template: %s",
+                        (outfit or {}).get("id"), exc)
+    return _render_from_template(fabric, outfit)
+
+
+def _render_from_reference(fabric, outfit, relative):
+    path = storage.media_path(relative)
+    if not path.exists():
+        return _render_from_template(fabric, outfit)
+    with imaging.Image.open(str(path)) as opened:
+        photo = imaging.to_rgb(opened.copy())
+    report = refabric.usability(photo)
+    if not report["ok"]:
+        from .errors import log
+        log.info("Reference photo for %s unusable (%s); using the template",
+                 (outfit or {}).get("id"), "; ".join(report["reasons"]))
+        return _render_from_template(fabric, outfit)
+    tile = _load_tile(fabric)
+    scale = float(outfit.get("pattern_scale") or 0.28)
+    return refabric.refabric(photo, tile, scale=scale)
+
+
+def _render_from_template(fabric, outfit):
     template_id = (outfit or {}).get("template_id") or (outfit or {}).get("garment_template")
     params = garment_templates.get(template_id)
     if params is None:

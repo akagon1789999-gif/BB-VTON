@@ -29,11 +29,35 @@ USER ──┬── person photo ───────────────�
 **How the garment reaches the model** is a strategy, set by
 `VTON_GARMENT_STRATEGY`:
 
-| Strategy | What is sent | Model | Notes |
+    person + garment template + fabric swatch  ->  tryon-max
+
+| Strategy | What is sent as the product image | Model | Notes |
 |---|---|---|---|
-| `fabric` *(default)* | the fabric itself as `product_image`, with a prompt explaining it is cloth to be tailored | `tryon-max` | FASHN's own recommendation for fabric-to-garment. The model decides the garment's shape from the prompt. ~2 credits (balanced/1k), ~3 (quality). |
-| `template` | a flat-lay composed by tiling the fabric into an outfit silhouette | `tryon-v1.6` (`tryon-max` in quality mode) | No generative guesswork about the cut, and the cheapest path. The silhouette is ours, so it is only as good as the template. |
-| `edit` | the person as `image`, the fabric as `image_context` | `edit` | Alternative FASHN suggested; prompt does the dressing. |
+| `composite` *(default)* | the outfit template filled with the chosen fabric — one flat-lay carrying both the cut and the cloth | `tryon-max` | The intended workflow. ~2 credits (balanced/1k), ~3 (quality). |
+| `fabric` | the bare fabric swatch; the garment exists only in the prompt | `tryon-max` | FASHN's suggestion when you have no garment reference at all. |
+| `template` | the composite, on the cheap legacy model | `tryon-v1.6` | Takes a `category` and a flat-lay hint instead of a prompt. Cheapest. |
+| `edit` | the person as `image`, the fabric as `image_context` | `edit` | The other approach FASHN suggested. |
+
+**Where the composite comes from.** Preferably a photograph of the real garment,
+uploaded per outfit (`reference` on the admin outfit form): the customer's
+fabric is painted onto it while its own luminance — folds, seams, contact
+shadows — is preserved, so the result reads as cloth rather than as a flat
+shape. Failing that, the vector template is filled instead.
+
+A reference photograph is only used when `refabric.usability()` passes, and the
+bar is deliberately high, because the failure mode is ugly:
+
+* **no model in frame** — masking a garment off a body is human parsing, which
+  this app does not do. A photo with a face in it is refused outright;
+* **the garment must contrast with its background** — a white shirt on a cream
+  backdrop masks as *background*, and the fabric lands on the room;
+* **the garment must be plain** — luminance cannot separate someone else's
+  print from the folds, so a patterned reference ghosts its old motif through
+  the new cloth.
+
+Anything rejected falls back to the vector template, and the admin is told why.
+For on-model or patterned references, the AI route (`edit` with the fabric as
+`image_context`) is the answer, and is not wired into composition yet.
 
 The prompt is load-bearing in `fabric` and `edit` mode — it is what stops the model
 treating a rectangle of cloth as a finished garment — so it is built from structured

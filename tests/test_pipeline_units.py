@@ -205,3 +205,58 @@ class ResultStorageTest(unittest.TestCase):
         from fabric_studio.errors import ProviderError
         with self.assertRaises(ProviderError):
             generations._store_result("gen_bad", "file:///etc/passwd")
+
+
+class ReferencePhotoTest(unittest.TestCase):
+    """A garment photograph is used only when it can actually be masked."""
+
+    def setUp(self):
+        context.reset_stores()
+        self.fabric = context.make_fabric("fab_ref", "stripes", ["#b8232f", "#f4efe6"])
+        self.outfit = context.make_outfit("out_ref", "modern-senator")
+
+    def _store_reference(self, image):
+        relative = "outfits/out_ref-reference.jpg"
+        storage.write_media(relative, imaging.encode_image(image, "JPEG", 92))
+        return catalog.save_outfit(dict(self.outfit, reference_image_path=relative))
+
+    def test_a_photo_with_a_model_in_it_is_refused(self):
+        from fabric_studio import refabric
+        report = refabric.usability(context.person_image())
+        self.assertFalse(report["ok"])
+        self.assertTrue(any("model" in reason for reason in report["reasons"]))
+
+    def test_an_unusable_reference_falls_back_to_the_template(self):
+        """It must fall back, never paint fabric over a face."""
+        outfit = self._store_reference(context.person_image())
+        composed = garment_composer.render(self.fabric, outfit)
+        template_only = garment_composer._render_from_template(self.fabric, outfit)
+        self.assertEqual(composed.size, template_only.size)
+
+    def test_a_plain_garment_on_a_contrasting_ground_is_accepted(self):
+        from fabric_studio import refabric
+        # A solid mid-grey garment shape on a dark ground: no model, no print,
+        # and clearly separable — the case the local path is for.
+        photo = imaging.Image.new("RGB", (600, 800), (18, 18, 22))
+        from PIL import ImageDraw
+        draw = ImageDraw.Draw(photo)
+        draw.rounded_rectangle([150, 120, 450, 700], radius=40, fill=(178, 176, 170))
+        report = refabric.usability(photo)
+        self.assertTrue(report["ok"], report["reasons"])
+
+    def test_re_fabric_keeps_the_garment_shape_and_changes_its_colour(self):
+        from fabric_studio import refabric
+        from PIL import ImageDraw
+        photo = imaging.Image.new("RGB", (600, 800), (18, 18, 22))
+        draw = ImageDraw.Draw(photo)
+        draw.rounded_rectangle([150, 120, 450, 700], radius=40, fill=(178, 176, 170))
+        tile = imaging.Image.new("RGB", (64, 64), (180, 30, 40))
+
+        result = refabric.refabric(photo, tile, scale=0.4)
+        numpy = imaging.numpy_module()
+        before = numpy.asarray(photo, dtype=numpy.float32)
+        after = numpy.asarray(result, dtype=numpy.float32)
+        # Background untouched, garment now red.
+        self.assertLess(abs(after[10, 10] - before[10, 10]).max(), 12)
+        centre = after[400, 300]
+        self.assertGreater(centre[0], centre[1] + 40)

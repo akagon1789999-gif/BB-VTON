@@ -389,7 +389,11 @@ def create_blueprint(admin_required):
         upload = request.files.get("preview")
         if upload and upload.filename or cleaned.get("template_id"):
             _render_outfit_preview(outfit_id, upload)
-        return json_response(200, catalog.outfit_view(catalog.require_outfit(outfit_id, include_inactive=True)))
+        reference_report = _store_outfit_reference(outfit_id, request.files.get("reference"))
+        payload = catalog.outfit_view(catalog.require_outfit(outfit_id, include_inactive=True))
+        if reference_report:
+            payload["referenceReport"] = reference_report
+        return json_response(200, payload)
 
     @bp.delete("/api/admin/outfits/<outfit_id>")
     @admin
@@ -446,6 +450,33 @@ def create_blueprint(admin_required):
         ))
 
     return bp
+
+
+def _store_outfit_reference(outfit_id, upload):
+    """Store a photograph of the real garment, and say whether it is usable.
+
+    The photo is kept either way — an operator may want it on record — but
+    composition only uses it when refabric.usability() passes.
+    """
+    if not upload or not upload.filename:
+        return None
+    from . import refabric
+
+    raw = upload.read(config.max_upload_bytes() + 1)
+    if len(raw) > config.max_upload_bytes():
+        raise ValidationError("That image is too large.", detail="Reference upload exceeded limit")
+    image = imaging.fit_within(imaging.open_image(raw), 1400)
+    relative = "outfits/%s-reference.jpg" % outfit_id
+    storage.write_media(relative, imaging.encode_image(image, "JPEG", 92))
+
+    report = refabric.usability(image)
+    catalog.OUTFIT_STORE.update(outfit_id, {
+        "reference_image_path": relative,
+        "reference_usable": report["ok"],
+        "reference_notes": report["reasons"],
+        "updated_at": catalog.now(),
+    })
+    return report
 
 
 def _render_outfit_preview(outfit_id, upload=None):

@@ -272,6 +272,8 @@ def outfit_view(record):
         "category": record.get("category"),
         "description": record.get("description"),
         "previewImageUrl": record.get("preview_image_url") or storage.media_url(record.get("preview_image_path")),
+        "referenceImageUrl": storage.media_url(record.get("reference_image_path")),
+        "hasReferencePhoto": bool(record.get("reference_image_path")),
         "garmentType": record.get("garment_type"),
         "maskType": record.get("mask_type"),
         "templateId": record.get("template_id"),

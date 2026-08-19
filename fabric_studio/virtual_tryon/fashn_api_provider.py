@@ -8,18 +8,19 @@ parameter here is invented — see .agents/skills/fashn/reference.md.
 The model is chosen by *strategy* (how the garment reaches the model) and
 *mode* (how much to spend), never by the caller naming a model:
 
-  fabric   -> tryon-max   `product_image` is the fabric itself and the prompt
-                          explains that it is cloth to be tailored. This is
-                          FASHN's own recommendation for fabric-to-garment and
-                          the default.
-  template -> tryon-v1.6  `garment_image` is a flat-lay we composed from the
-              (or -max)   fabric, so it needs no explaining — just a category
-                          and a photo-type hint. Cheapest and most repeatable.
-  edit     -> edit        `image` is the person and `image_context` is the
+  composite -> tryon-max  `product_image` is the outfit template filled with the
+                          chosen fabric — one flat-lay carrying both the cut and
+                          the cloth. The default, and the intended workflow:
+                          person + garment template + fabric swatch -> tryon-max.
+  fabric    -> tryon-max  `product_image` is the bare fabric swatch; the prompt
+                          alone describes the garment to tailor from it.
+  template  -> tryon-v1.6 the same composite on the cheap legacy model, which
+                          takes a category and a photo-type hint instead of a
+                          prompt.
+  edit      -> edit       `image` is the person and `image_context` is the
                           fabric; the prompt does the dressing.
 
-Overridable with VTON_FABRIC_MODEL / VTON_FAST_MODEL / VTON_QUALITY_MODEL /
-VTON_EDIT_MODEL.
+Overridable with VTON_TRYON_MODEL / VTON_FAST_MODEL / VTON_EDIT_MODEL.
 """
 from .. import config
 from ..errors import ProviderConfigError, ProviderError, friendly_runtime_message
@@ -80,13 +81,11 @@ class FashnApiProvider(VirtualTryOnProvider):
 
     def model_for(self, request):
         strategy = request.strategy
-        if strategy == "fabric":
-            return config.vton_fabric_model()
         if strategy == "edit":
             return config.vton_edit_model()
-        if request.mode == "quality":
-            return config.vton_quality_model()
-        return config.vton_fast_model()
+        if strategy == "template" and request.mode != "quality":
+            return config.vton_fast_model()
+        return config.vton_tryon_model()
 
     # ------------------------------------------------------------ inputs ---
     def build_inputs(self, request, model_name):

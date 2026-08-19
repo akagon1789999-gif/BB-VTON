@@ -53,24 +53,38 @@ class FashnInputMappingTest(unittest.TestCase):
     def setUp(self):
         self.provider = FashnApiProvider(api_key="test-key")
 
-    def request(self, strategy="fabric", mode="fast", prompt="Tailor it into an agbada.", **options):
+    def request(self, strategy="composite", mode="fast", prompt="Wear this exact garment.", **options):
         opts = {"strategy": strategy, "mode": mode, "prompt": prompt}
         opts.update(options)
         return TryOnRequest("PERSON", "GARMENT", {"category": "one-pieces"}, opts)
 
-    def test_fabric_strategy_sends_the_cloth_to_tryon_max(self):
-        """The default: the fabric *is* the product image, explained by prompt."""
-        request = self.request(strategy="fabric")
+    def test_composite_is_the_default_and_goes_to_tryon_max(self):
+        """person + garment template + fabric swatch -> tryon-max."""
+        request = self.request()
+        self.assertEqual(request.strategy, "composite")
         model = self.provider.model_for(request)
-        self.assertEqual(model, config.vton_fabric_model())
+        self.assertEqual(model, config.vton_tryon_model())
         self.assertEqual(model, "tryon-max")
         inputs = self.provider.build_inputs(request, model)
         self.assertEqual(inputs["product_image"], "GARMENT")
         self.assertEqual(inputs["model_image"], "PERSON")
-        self.assertIn("agbada", inputs["prompt"])
+        self.assertIn("prompt", inputs)
         self.assertEqual(inputs["generation_mode"], "balanced")
         self.assertNotIn("garment_image", inputs)
         self.assertNotIn("category", inputs)
+
+    def test_a_request_with_no_strategy_still_composites(self):
+        request = TryOnRequest("PERSON", "GARMENT", {}, {"prompt": "Wear this."})
+        self.assertEqual(request.strategy, "composite")
+        self.assertEqual(self.provider.model_for(request), "tryon-max")
+
+    def test_fabric_strategy_sends_the_bare_swatch_to_tryon_max(self):
+        request = self.request(strategy="fabric", prompt="Tailor it into an agbada.")
+        model = self.provider.model_for(request)
+        self.assertEqual(model, "tryon-max")
+        inputs = self.provider.build_inputs(request, model)
+        self.assertEqual(inputs["product_image"], "GARMENT")
+        self.assertIn("agbada", inputs["prompt"])
 
     def test_fabric_strategy_in_design_mode_asks_for_quality(self):
         inputs = self.provider.build_inputs(self.request(mode="quality"), "tryon-max")
@@ -160,7 +174,7 @@ class FashnResponseMappingTest(unittest.TestCase):
         self.assertEqual(result.generation_id, "pred-1")
         self.assertEqual(result.metadata["creditsUsed"], 2.0)
         self.assertTrue(self.calls[0]["url"].endswith("/run"))
-        self.assertEqual(self.calls[0]["payload"]["model_name"], config.vton_fabric_model())
+        self.assertEqual(self.calls[0]["payload"]["model_name"], config.vton_tryon_model())
 
     def test_in_flight_statuses_map_to_processing(self):
         self._patch([

@@ -2,9 +2,10 @@
 
     person photo -> validate/normalise
                  -> processed fabric (cached)
-                 -> garment brief: the fabric itself + a prompt describing the
-                    outfit (default), or a flat-lay composed from an outfit
-                    template (VTON_GARMENT_STRATEGY=template)
+                 -> garment brief: the outfit template filled with the chosen
+                    fabric, as one flat-lay (default), or the bare swatch with
+                    the garment described in the prompt
+                    (VTON_GARMENT_STRATEGY=fabric)
                  -> segmentation hook (no-op by default)
                  -> VirtualTryOnProvider.generate + poll
                  -> store result -> history record
@@ -296,13 +297,15 @@ def _build_garment_brief(strategy, fabric, outfit, user_prompt):
     composed template remains available: it costs no generative guesswork about
     the garment's shape and is cheaper on `tryon-v1.6`.
     """
-    if strategy == "template":
+    if strategy in ("composite", "template"):
         composed = garment_composer.compose(fabric, outfit)
+        builder = (prompts.build_composite_prompt if strategy == "composite"
+                   else prompts.build_template_prompt)
         return {
             "image": _data_url_for_media(composed["path"]),
             "url": composed["url"],
             "cached": composed["cached"],
-            "prompt": prompts.build_template_prompt(outfit, fabric, user_prompt),
+            "prompt": builder(outfit, fabric, user_prompt),
         }
 
     processed = (fabric.get("processed") or {})

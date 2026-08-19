@@ -62,6 +62,29 @@ def describe_garment(outfit):
     return "a %s" % name.lower() if name else GARMENT_FALLBACK
 
 
+def build_composite_prompt(outfit, fabric, user_prompt=None):
+    """Prompt for the composite strategy.
+
+    Here the product image already *is* the garment in the customer's fabric,
+    so the prompt must not re-describe the cut and invite a second
+    interpretation. Its job is fidelity: wear this, exactly as shown.
+    """
+    sentences = [
+        "The product image is a flat-lay of the finished outfit — %s — already made in the customer's chosen fabric."
+        % describe_garment(outfit),
+        "Dress the person in exactly this garment, keeping its cut and the fabric's print, colours and motif scale as shown, "
+        "with natural drape, folds and shadows on the body.",
+        "The fabric is %s." % describe_fabric(fabric),
+    ]
+    extra = _sentence(user_prompt)
+    if extra:
+        sentences.append(extra)
+    sentences.append(
+        "Keep the person's face, body, pose, hands and the background exactly as they are."
+    )
+    return _clip(" ".join(sentences))
+
+
 def build_tryon_prompt(outfit, fabric, user_prompt=None):
     """Prompt for `tryon-max` when the product image is the fabric itself."""
     sentences = [

@@ -55,10 +55,9 @@ def vton_fast_model():
     return _env("VTON_FAST_MODEL", "tryon-v1.6")
 
 
-# Model used for MODE B / quality runs. tryon-max is the flagship model and
-# accepts a refinement prompt alongside the product image.
+# Retained so an operator can still pin the flagship model by its old name.
 def vton_quality_model():
-    return _env("VTON_QUALITY_MODEL", "tryon-max")
+    return _env("VTON_QUALITY_MODEL") or vton_tryon_model()
 
 
 def vton_timeout_seconds():
@@ -150,22 +149,28 @@ def debug_errors():
 
 # ------------------------------------------------------------- strategies ---
 # How the garment reaches the try-on model:
-#   fabric   - send the fabric itself as the product image and describe the
-#              garment in the prompt (FASHN's own recommendation; default)
-#   template - send a flat-lay composed from the fabric and an outfit template
-#              (deterministic and cheap, but the garment shape is ours, not the
-#              model's)
-#   edit     - send the person as the image and the fabric as image_context
+#   composite - the outfit template filled with the chosen fabric, sent as one
+#               flat-lay product image (the intended workflow: person + garment
+#               template + fabric swatch -> tryon-max)
+#   fabric    - the bare fabric swatch as the product image, with the garment
+#               described only in the prompt
+#   template  - the composite on the cheap legacy model (tryon-v1.6)
+#   edit      - the person as the image and the fabric as image_context
+STRATEGIES = ("composite", "fabric", "template", "edit")
+
+
 def vton_garment_strategy():
-    value = _env("VTON_GARMENT_STRATEGY", "fabric").lower()
-    return value if value in ("fabric", "template", "edit") else "fabric"
+    value = _env("VTON_GARMENT_STRATEGY", "composite").lower()
+    return value if value in STRATEGIES else "composite"
 
 
-# Model used when the fabric goes straight to the try-on model.
-def vton_fabric_model():
-    return _env("VTON_FABRIC_MODEL", "tryon-max")
+# The flagship try-on model, used by every strategy except `template` (cheap)
+# and `edit`. VTON_FABRIC_MODEL is honoured as the previous name.
+def vton_tryon_model():
+    return _env("VTON_TRYON_MODEL") or _env("VTON_FABRIC_MODEL") or "tryon-max"
 
 
+# Kept for the `template` strategy, which trades fidelity for cost.
 def vton_edit_model():
     return _env("VTON_EDIT_MODEL", "edit")
 

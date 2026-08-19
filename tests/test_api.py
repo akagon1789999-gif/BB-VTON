@@ -8,7 +8,7 @@ import unittest
 from flask import Flask, Response
 
 from . import context
-from fabric_studio import catalog, imaging, register, storage
+from fabric_studio import catalog, garment_composer, imaging, register, storage
 from fabric_studio.generations import GENERATION_STORE
 
 ADMIN_HEADER = {"X-Test-Admin": "yes"}
@@ -285,26 +285,35 @@ class GarmentStrategyTest(ApiTestCase):
             time.sleep(0.2)
         return captured.get("request"), polled
 
-    def test_default_strategy_sends_the_fabric_itself(self):
+    def test_default_sends_the_template_filled_with_the_fabric(self):
+        """person + garment template + fabric swatch -> one flat-lay."""
+        request, final = self._capture_request({})
+        self.assertEqual(final["status"], "completed")
+        self.assertEqual(request.strategy, "composite")
+
+        fabric = catalog.get_fabric("fab_api")
+        outfit = catalog.get_outfit("out_api")
+        composed = garment_composer.compose(fabric, outfit)
+        expected = imaging.to_data_url(
+            storage.media_path(composed["path"]).read_bytes(), "JPEG")
+        self.assertEqual(request.garment_image, expected)
+
+        # It is already the garment in the right cloth, so the prompt asks for
+        # fidelity rather than re-describing the cut from scratch.
+        self.assertIn("already made in the customer's chosen fabric", request.prompt)
+        self.assertNotIn("flat length of fabric", request.prompt)
+
+    def test_fabric_strategy_sends_the_bare_swatch(self):
+        os.environ["VTON_GARMENT_STRATEGY"] = "fabric"
+        self.addCleanup(os.environ.pop, "VTON_GARMENT_STRATEGY", None)
         request, final = self._capture_request({})
         self.assertEqual(final["status"], "completed")
         self.assertEqual(request.strategy, "fabric")
-        # The image handed over is the processed fabric, not a composed garment.
         fabric = catalog.get_fabric("fab_api")
         expected = imaging.to_data_url(
             storage.media_path(fabric["processed"]["normalizedPath"]).read_bytes(), "JPEG")
         self.assertEqual(request.garment_image, expected)
         self.assertIn("flat length of fabric", request.prompt)
-        self.assertIn("modern senator", request.prompt.lower())
-
-    def test_template_strategy_sends_a_composed_flat_lay(self):
-        os.environ["VTON_GARMENT_STRATEGY"] = "template"
-        self.addCleanup(os.environ.pop, "VTON_GARMENT_STRATEGY", None)
-        request, final = self._capture_request({})
-        self.assertEqual(final["status"], "completed")
-        self.assertEqual(request.strategy, "template")
-        self.assertNotIn("flat length of fabric", request.prompt)
-        self.assertIn("drape", request.prompt)
 
     def test_design_mode_folds_the_customer_brief_into_the_prompt(self):
         request, _final = self._capture_request(
@@ -315,5 +324,6 @@ class GarmentStrategyTest(ApiTestCase):
     def test_the_built_prompt_is_recorded_on_the_generation(self):
         _request, final = self._capture_request({})
         record = GENERATION_STORE.get(final["generationId"])
-        self.assertEqual(record["metadata"]["strategy"], "fabric")
-        self.assertIn("flat length of fabric", record["metadata"]["builtPrompt"])
+        self.assertEqual(record["metadata"]["strategy"], "composite")
+        self.assertIn("already made in the customer's chosen fabric",
+                      record["metadata"]["builtPrompt"])

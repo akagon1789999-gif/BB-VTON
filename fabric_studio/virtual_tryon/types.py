@@ -30,13 +30,14 @@ class TryOnRequest(object):
 
     @property
     def strategy(self):
-        """How the garment reaches the model: fabric | template | edit.
+        """How the garment reaches the model.
 
-        'fabric' sends the cloth itself and describes the garment in the
-        prompt; 'template' sends a composed flat-lay; 'edit' sends the person
-        with the fabric as visual context.
+        'composite' (default) sends the outfit template filled with the chosen
+        fabric as one flat-lay; 'fabric' sends the bare swatch and describes the
+        garment in the prompt; 'template' is the composite on the cheap legacy
+        model; 'edit' sends the person with the fabric as visual context.
         """
-        return self.options.get("strategy") or "fabric"
+        return self.options.get("strategy") or "composite"
 
     @property
     def category(self):
