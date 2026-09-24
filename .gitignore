@@ -23,3 +23,8 @@ __pycache__/
 # Studio uploads (the fabric and photo a visitor hands to tryon-max). Same
 # story: they live on the mounted DATA_DIR volume, not in git.
 /studio-uploads/
+
+# PAI-EAS deploy credentials and the config rendered from the template.
+deploy/pai-eas/.env.deploy
+deploy/pai-eas/eas_config.json
+deploy/pai-eas/tests/venv/

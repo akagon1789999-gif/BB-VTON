@@ -1,0 +1,73 @@
+{
+  "name": "__SERVICE_NAME__",
+  "metadata": {
+    "instance": 1,
+    "enable_webservice": true,
+    "rpc": {
+      "keepalive": 600000,
+      "worker_threads": 1,
+      "max_queue_size": 32
+    }
+  },
+  "cloud": {
+    "computing": {
+      "instances": [
+        {
+          "type": "__INSTANCE_TYPE__"
+        }
+      ]
+    }
+  },
+  "containers": [
+    {
+      "image": "__IMAGE__",
+      "port": 8000,
+      "script": "uvicorn app:app --host 0.0.0.0 --port 8000 --workers 1 --timeout-keep-alive 620 --no-access-log",
+      "env": [
+        { "name": "WEIGHTS_DIR", "value": "/mnt/models" },
+        { "name": "DEVICE", "value": "cuda" },
+        { "name": "WARMUP", "value": "true" },
+        { "name": "EMPTY_CACHE", "value": "true" },
+        { "name": "MAX_QUEUE", "value": "16" },
+        { "name": "QUEUE_TIMEOUT_S", "value": "300" },
+        { "name": "DEFAULT_TIMESTEPS", "value": "30" },
+        { "name": "MAX_TIMESTEPS", "value": "50" },
+        { "name": "MAX_SAMPLES", "value": "4" },
+        { "name": "MAX_IMAGE_BYTES", "value": "20971520" },
+        { "name": "URL_ALLOWLIST", "value": "__URL_ALLOWLIST__" },
+        { "name": "LOG_LEVEL", "value": "INFO" }
+      ]
+    }
+  ],
+  "storage": [
+    {
+      "mount_path": "/mnt/models",
+      "oss": {
+        "endpoint": "__OSS_INTERNAL_ENDPOINT__",
+        "path": "__OSS_WEIGHTS_PATH__",
+        "readOnly": true
+      }
+    }
+  ],
+  "autoscaler": {
+    "min": 0,
+    "max": __MAX_REPLICAS__,
+    "behavior": {
+      "onZero": {
+        "interceptTraffic": true,
+        "scaleDownGracePeriodSeconds": 900,
+        "scaleUpActivationReplicas": 1
+      },
+      "scaleDown": {
+        "stabilizationWindowSeconds": 600
+      },
+      "scaleUp": {
+        "stabilizationWindowSeconds": 0
+      }
+    },
+    "scaleStrategies": [
+      { "metricName": "qps", "threshold": 2 },
+      { "metricName": "gpu[util]", "threshold": 70 }
+    ]
+  }
+}
