@@ -19,3 +19,7 @@ __pycache__/
 /fabric_generations.json
 /fabric_studio_meta.json
 /media/
+
+# Studio uploads (the fabric and photo a visitor hands to tryon-max). Same
+# story: they live on the mounted DATA_DIR volume, not in git.
+/studio-uploads/

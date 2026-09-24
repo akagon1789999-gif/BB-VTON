@@ -1,18 +1,24 @@
 # Fabric Studio
 
-Person **+** garment **+** (optionally) fabric → the person wearing it. One flow with
-two entry points:
+> **The two customer-facing flows are separate, and neither is the six-step
+> wizard this document originally described.** That wizard — the merged flow
+> from `75ec72a` — has been removed.
+>
+> * **Virtual Try-On** is two steps: your photo, then your look. The garment is
+>   a product from the shop catalogue, picked via *Browse Collection* or by
+>   pressing *Try On* on a catalogue card. It posts straight to
+>   `/api/fashn/run` through the proxy in `server.py`, not to this pipeline.
+> * **Fabric Studio** is a separate workbench — a fabric slot, a photo slot and
+>   one call to `tryon-max`. See **[STUDIO.md](STUDIO.md)**.
+>
+> What survives here is the **backend** described below: the fabric and outfit
+> catalogues, the processing pipeline, the admin tools and the importer.
+> Fabric Studio reads this pipeline's fabric catalogue through its picker, and
+> **My Designs** lists this pipeline's recorded generations alongside the
+> studio's own browser-side history.
 
-* **Virtual Try-On** — photo, then a garment (a product from the shop, one of our outfit
-  styles, or an uploaded photo), then *optionally* a fabric to remake it in. Skipping the
-  fabric is a plain try-on, which is what this page always did.
-* **Fabric Studio** — the same flow, cloth first: photo, fabric, outfit. The fabric is
-  required here; that is the only difference.
-
-Both render from one implementation, so the steps, uploads, preview, result screen and
-history behave identically; only the step order, labels and whether fabric is optional
-change. The old two-step try-on view is gone, and with it the trip to the Catalog page
-just to pick a garment.
+The pipeline below still powers the catalogues and the admin surface. The
+customer-facing generation paths are documented in [STUDIO.md](STUDIO.md).
 
 ```
 USER ──┬── person photo ────────────────┐

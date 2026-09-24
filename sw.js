@@ -1,4 +1,7 @@
-const CACHE = 'apparel-tryon-v3';
+const CACHE = 'apparel-tryon-v4';
+// Bump CACHE on every release that touches these files. The activate handler
+// deletes every cache whose name does not match, which is what evicts the
+// previous release's framework and offline fallback.
 const APP_SHELL = [
   './index.html',
   './support.js',

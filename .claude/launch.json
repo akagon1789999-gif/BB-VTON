@@ -24,6 +24,12 @@
       "runtimeExecutable": "bash",
       "runtimeArgs": ["-c", "set -a; . ./.env; set +a; PORT=8012 python3 server.py"],
       "port": 8012
+    },
+    {
+      "name": "studio-offline",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "set -a; . ./.env; set +a; FASHN_API_BASE=http://127.0.0.1:9/v1 PORT=8013 python3 server.py"],
+      "port": 8013
     }
   ]
 }

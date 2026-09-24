@@ -15,6 +15,7 @@ from pathlib import Path
 from flask import Flask, Response, request, send_from_directory
 
 import fabric_studio
+import studio
 
 
 ROOT = Path(__file__).resolve().parent
@@ -198,6 +199,13 @@ def proxy_to_fashn(endpoint, method="GET", payload=None):
 # routes below are untouched.
 fabric_studio.register(app, admin_required=requires_admin)
 fabric_studio.run_startup_tasks()
+
+
+# ----------------------------------------------------------------------- Studio
+# Fabric + model photo -> the person wearing that cloth, straight through
+# FASHN `tryon-max` with a prompt composed from the garment type, template and
+# coverage. Owns /api/studio/*; the catalogue endpoints above are untouched.
+studio.register(app)
 
 
 @app.post("/api/fashn/run")
