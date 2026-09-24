@@ -1,0 +1,152 @@
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Indigo dye house ------------------------------------------------ */
+    --vat: 9 11 16; /* vat-indigo black, the ground */
+    --warp: 17 21 30; /* panels */
+    --weft: 24 29 41; /* raised surfaces, inputs */
+    --thread: 40 47 63; /* hairline rules */
+    --calico: 234 229 217; /* raw undyed cotton, primary type */
+    --lint: 138 146 164; /* secondary type */
+    --slub: 92 100 118; /* tertiary type, disabled */
+    --indigo: 88 118 214; /* dye, informational accent */
+    --selvedge: 226 61 40; /* the single loud thread */
+
+    --font-display: 'Archivo', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+
+  * {
+    border-color: rgb(var(--thread));
+  }
+
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-vat text-calico font-sans antialiased;
+    /* warp and weft: a 1px grid at low contrast, the cloth under everything */
+    background-image:
+      repeating-linear-gradient(
+        0deg,
+        rgb(var(--thread) / 0.22) 0px,
+        rgb(var(--thread) / 0.22) 1px,
+        transparent 1px,
+        transparent 7px
+      ),
+      repeating-linear-gradient(
+        90deg,
+        rgb(var(--thread) / 0.22) 0px,
+        rgb(var(--thread) / 0.22) 1px,
+        transparent 1px,
+        transparent 7px
+      );
+  }
+
+  ::selection {
+    background: rgb(var(--selvedge) / 0.32);
+  }
+
+  /* Keyboard focus is always visible and always the selvedge thread. */
+  :focus-visible {
+    outline: 2px solid rgb(var(--selvedge));
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  input[type='range'] {
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+  }
+  input[type='range']::-webkit-slider-runnable-track {
+    height: 2px;
+    background: rgb(var(--thread));
+  }
+  input[type='range']::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 14px;
+    width: 6px;
+    margin-top: -6px;
+    background: rgb(var(--calico));
+    border-radius: 1px;
+  }
+  input[type='range']:focus-visible::-webkit-slider-thumb {
+    background: rgb(var(--selvedge));
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: rgb(var(--vat));
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgb(var(--thread));
+    border: 3px solid rgb(var(--vat));
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgb(var(--slub));
+  }
+}
+
+@layer components {
+  /* The signature element. A 2px vermilion thread at the leading edge of
+     whatever is currently active. Used for selection, never for decoration. */
+  .selvedge-mark {
+    position: relative;
+  }
+  .selvedge-mark::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: rgb(var(--selvedge));
+  }
+
+  .label {
+    @apply font-mono text-[10px] uppercase tracking-loom text-lint;
+  }
+
+  .panel {
+    @apply border border-thread bg-warp;
+  }
+
+  .field {
+    @apply w-full border border-thread bg-weft px-3 py-2 text-sm text-calico
+           placeholder:text-slub focus:border-slub focus:outline-none;
+  }
+
+  /* Loom weave: the diagonal twill used on empty drop targets. */
+  .twill {
+    background-image: repeating-linear-gradient(
+      45deg,
+      rgb(var(--thread) / 0.5) 0px,
+      rgb(var(--thread) / 0.5) 1px,
+      transparent 1px,
+      transparent 6px
+    );
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
