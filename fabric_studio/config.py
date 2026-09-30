@@ -73,6 +73,13 @@ def vton15_token():
     return _env("FASHN_VTON15_TOKEN")
 
 
+# Its own timeout, not VTON_TIMEOUT_SECONDS. The service scales to zero, so the
+# first call after idle waits on an image pull, a 2 GB read off OSS and CUDA
+# warm-up -- 2-4 minutes. A cloud-sized timeout would abandon every cold start.
+def vton15_timeout_seconds():
+    return _env_int("FASHN_VTON15_TIMEOUT_SECONDS", 420)
+
+
 # ------------------------------------------------------------ segmentation ---
 # noop (default) | remote
 def segmentation_provider_name():

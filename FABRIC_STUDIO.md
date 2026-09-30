@@ -121,7 +121,7 @@ catalogue data in `prompts.py` rather than assembled at the call site.
 | `virtual_tryon/provider.py` | `VirtualTryOnProvider` interface + factory |
 | `virtual_tryon/http.py` | urllib JSON helper with error classification |
 | `virtual_tryon/fashn_api_provider.py` | FASHN cloud API provider (current) |
-| `virtual_tryon/fashn_vton15_provider.py` | Self-hosted VTON 1.5 provider (migration target) |
+| `virtual_tryon/fashn_vton15_provider.py` | Self-hosted VTON 1.5 on PAI-EAS (sync API, threaded adapter) |
 | `virtual_tryon/mock_provider.py` | Zero-credit provider for development and tests |
 
 **Tests** (`tests/`): `context.py`, `test_storage.py`, `test_fabric_analysis.py`,
@@ -198,7 +198,8 @@ missing (e.g. a volume was replaced) and reports uploaded images it cannot regen
 | `VTON_EDIT_MODEL` | `edit` | Model for the `edit` strategy |
 | `VTON_RESOLUTION` | `1k` | `1k` · `2k` · `4k` — higher costs more credits |
 | `VTON_TIMEOUT_SECONDS` | `240` | Submit + poll budget per generation |
-| `FASHN_VTON15_URL` / `FASHN_VTON15_TOKEN` | — | Self-hosted inference server |
+| `FASHN_VTON15_URL` / `FASHN_VTON15_TOKEN` | — | PAI-EAS endpoint + access token |
+| `FASHN_VTON15_TIMEOUT_SECONDS` | `420` | Must outlast a 2–4 min cold start |
 | `SEGMENTATION_PROVIDER` | `noop` | `noop` · `remote` |
 | `SEGMENTATION_URL` / `SEGMENTATION_TOKEN` | — | External human-parsing service |
 | `DATA_DIR` | repo root | Existing variable; also holds Fabric Studio data |
@@ -346,20 +347,32 @@ on Railway (or any Python host) and point the domain there.
 
 ```bash
 VTON_PROVIDER=fashn_vton_15
-FASHN_VTON15_URL=https://your-gpu-host
-FASHN_VTON15_TOKEN=…            # optional
+FASHN_VTON15_URL=http://<service>.<uid>.<region>.pai-eas.aliyuncs.com
+FASHN_VTON15_TOKEN=…            # AccessToken from `eascmd desc <service>`
+# FASHN_VTON15_TIMEOUT_SECONDS=420
 ```
 
 No code change, no data change: catalogues, fabric processing, garment composition,
 segmentation, history, admin and the entire frontend sit above the provider interface.
-
-`FashnVton15Provider` expects the inference server to expose the same envelope the cloud
-API uses (`POST /run` with `{model_name, inputs}`, `GET /status/{id}` returning
-`{id, status, output[], error}`). It also forwards local segmentation masks when a parsing
-service is configured, so the GPU server can skip its own human parsing. **It has not been
-exercised against a real deployment** — verify the input names your build expects and run
-the mock-to-self-hosted comparison on a handful of fabrics before moving traffic.
 Roll back by setting `VTON_PROVIDER=fashn_api`.
+
+`FashnVton15Provider` targets the service in `deploy/pai-eas/app.py`, which is **not**
+shaped like the cloud API. The cloud is submit-then-poll (`POST /run`, `GET /status/{id}`);
+ours is a single synchronous `POST /v1/tryon` whose reply carries the images. There are no
+job ids to poll, the token goes in `Authorization` bare (EAS rejects `Bearer …`), and the
+request model declares `extra: forbid` — so an unrecognised field, segmentation masks
+included, is a `422` rather than something quietly ignored.
+
+The provider bridges that gap by running the blocking call on a worker thread and
+answering polls from an in-process table, so `generate()` still returns immediately. That
+matters because the service scales to zero: the first request after idle pays an image
+pull, a 2 GB read off OSS and CUDA warm-up — 2–4 minutes — which no browser will wait out
+synchronously. Hence the 420-second default timeout.
+
+**The limitation that follows:** job state is per-process. Under gunicorn with two or more
+workers, a poll can land on a worker that never saw the submission and is told the job is
+unknown. Run a single worker, pin sessions, or move the job table to shared storage before
+scaling out.
 
 ## 14. Known limitations
 

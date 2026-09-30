@@ -1,10 +1,17 @@
 """Provider abstraction: switching, input mapping, status and error mapping."""
 import os
+import time
 import unittest
+from unittest import mock
 
 from . import context
 from fabric_studio import config
-from fabric_studio.errors import ProviderConfigError, ProviderError, RateLimitError
+from fabric_studio.errors import (
+    ProviderConfigError,
+    ProviderError,
+    RateLimitError,
+    TimeoutError_,
+)
 from fabric_studio.virtual_tryon import (
     STATUS_COMPLETED,
     STATUS_FAILED,
@@ -16,6 +23,7 @@ from fabric_studio.virtual_tryon import (
     reset_providers,
 )
 from fabric_studio.virtual_tryon.fashn_api_provider import FashnApiProvider
+from fabric_studio.virtual_tryon import fashn_vton15_provider as vton15_module
 from fabric_studio.virtual_tryon.fashn_vton15_provider import FashnVton15Provider
 from fabric_studio.virtual_tryon.mock_provider import MockProvider
 
@@ -238,17 +246,44 @@ class FashnResponseMappingTest(unittest.TestCase):
 
 
 class SelfHostedProviderTest(unittest.TestCase):
-    def test_it_implements_the_same_interface(self):
-        provider = FashnVton15Provider(base_url="https://gpu.internal", token="t")
-        self.assertTrue(provider.is_configured())
-        inputs = provider.build_inputs(TryOnRequest("p", "g", {"category": "tops"}))
-        self.assertEqual(inputs["model_image"], "p")
-        self.assertEqual(inputs["category"], "tops")
+    """The service is deploy/pai-eas/app.py: synchronous POST /v1/tryon."""
 
-    def test_masks_are_passed_through_when_available(self):
-        provider = FashnVton15Provider(base_url="https://gpu.internal")
-        request = TryOnRequest("p", "g", {"category": "tops", "masks": {"person": "data:..."}})
-        self.assertIn("masks", provider.build_inputs(request))
+    def setUp(self):
+        self.provider = FashnVton15Provider(base_url="https://gpu.internal", token="tok")
+
+    # ------------------------------------------------------------- payload
+    def test_payload_uses_the_field_names_the_service_declares(self):
+        payload = self.provider.build_payload(TryOnRequest("p", "g", {"category": "tops"}))
+        self.assertEqual(payload["person_image"], "p")
+        self.assertEqual(payload["garment_image"], "g")
+        self.assertEqual(payload["category"], "tops")
+        self.assertEqual(payload["garment_photo_type"], "flat-lay")
+
+    def test_payload_carries_no_field_the_service_would_reject(self):
+        # app.py sets model_config = {"extra": "forbid"}, so an unknown key is
+        # a 422, not something quietly dropped. This is the test that would
+        # have caught the old provider sending model_name/inputs/masks.
+        allowed = {
+            "person_image", "garment_image", "category", "garment_photo_type",
+            "num_samples", "num_timesteps", "guidance_scale", "seed",
+            "segmentation_free", "response_format",
+        }
+        request = TryOnRequest(
+            "p", "g",
+            {"category": "tops", "masks": {"person": "data:..."}},
+            {"seed": 7, "guidance_scale": 2.0, "segmentation_free": False},
+        )
+        self.assertTrue(set(self.provider.build_payload(request)) <= allowed)
+
+    def test_mode_selects_timesteps(self):
+        fast = self.provider.build_payload(TryOnRequest("p", "g", {}, {"mode": "fast"}))
+        quality = self.provider.build_payload(TryOnRequest("p", "g", {}, {"mode": "quality"}))
+        self.assertEqual(fast["num_timesteps"], 20)
+        self.assertEqual(quality["num_timesteps"], 50)
+
+    # ---------------------------------------------------------------- auth
+    def test_token_is_sent_bare_because_eas_rejects_bearer(self):
+        self.assertEqual(self.provider._headers()["Authorization"], "tok")
 
     def test_unconfigured_url_is_a_config_error(self):
         provider = FashnVton15Provider(base_url="")
@@ -256,6 +291,86 @@ class SelfHostedProviderTest(unittest.TestCase):
         self.assertFalse(provider.is_configured())
         with self.assertRaises(ProviderConfigError):
             provider.generate(TryOnRequest("p", "g"))
+
+    # ------------------------------------------------------------ dispatch
+    def _await_terminal(self, generation_id, timeout=5.0):
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            result = self.provider.get_status(generation_id)
+            if result.is_terminal:
+                return result
+            time.sleep(0.01)
+        self.fail("job %s never reached a terminal status" % generation_id)
+
+    def test_a_successful_call_completes_off_the_request_thread(self):
+        calls = []
+
+        def fake_request_json(url, method="GET", payload=None, headers=None, timeout=60):
+            calls.append((url, method, payload, headers, timeout))
+            return 200, {
+                "request_id": "req-1",
+                "model": "fashn-vton-1.5",
+                "elapsed_seconds": 12.5,
+                "seed": 42,
+                "images": ["data:image/png;base64,AAAA"],
+            }, {}
+
+        with mock.patch.object(vton15_module, "request_json", fake_request_json):
+            submitted = self.provider.generate(TryOnRequest("p", "g", {"category": "tops"}))
+            # Returns immediately, non-terminal: a cold start is 2-4 minutes and
+            # must not block the caller.
+            self.assertEqual(submitted.status, STATUS_QUEUED)
+            self.assertFalse(submitted.is_terminal)
+            result = self._await_terminal(submitted.generation_id)
+
+        self.assertEqual(result.status, STATUS_COMPLETED)
+        self.assertEqual(result.result_image, "data:image/png;base64,AAAA")
+        self.assertEqual(result.metadata["creditsUsed"], 0)
+        self.assertEqual(result.metadata["elapsedSeconds"], 12.5)
+
+        url, method, _payload, headers, timeout = calls[0]
+        self.assertEqual(url, "https://gpu.internal/v1/tryon")
+        self.assertEqual(method, "POST")
+        self.assertEqual(headers["Authorization"], "tok")
+        self.assertGreaterEqual(timeout, 300)  # must outlast a cold start
+
+    def test_busy_service_is_reported_as_busy_not_as_a_crash(self):
+        def overloaded(*args, **kwargs):
+            return 503, {"error": "queue full", "status": 503}, {}
+
+        with mock.patch.object(vton15_module, "request_json", overloaded):
+            submitted = self.provider.generate(TryOnRequest("p", "g"))
+            result = self._await_terminal(submitted.generation_id)
+
+        self.assertEqual(result.status, STATUS_FAILED)
+        self.assertEqual(result.error_code, "HTTP503")
+        self.assertIn("busy", result.error.lower())
+
+    def test_a_thrown_error_lands_as_a_failed_job_rather_than_a_lost_thread(self):
+        def explode(*args, **kwargs):
+            raise TimeoutError_(detail="Request timed out")
+
+        with mock.patch.object(vton15_module, "request_json", explode):
+            submitted = self.provider.generate(TryOnRequest("p", "g"))
+            result = self._await_terminal(submitted.generation_id)
+
+        self.assertEqual(result.status, STATUS_FAILED)
+        self.assertIn("timed out", result.error.lower())
+
+    def test_an_empty_image_list_is_a_failure_not_a_blank_success(self):
+        with mock.patch.object(
+            vton15_module, "request_json", lambda *a, **k: (200, {"images": []}, {})
+        ):
+            submitted = self.provider.generate(TryOnRequest("p", "g"))
+            result = self._await_terminal(submitted.generation_id)
+
+        self.assertEqual(result.status, STATUS_FAILED)
+        self.assertEqual(result.error_code, "EmptyOutput")
+
+    def test_unknown_generation_fails_rather_than_polling_forever(self):
+        result = self.provider.get_status("vt15_missing")
+        self.assertEqual(result.status, STATUS_FAILED)
+        self.assertEqual(result.error_code, "UnknownGeneration")
 
 
 class MockProviderTest(unittest.TestCase):
