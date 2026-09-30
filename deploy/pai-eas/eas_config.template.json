@@ -21,6 +21,7 @@
   "containers": [
     {
       "image": "__IMAGE__",
+      "dockerAuth": "__DOCKER_AUTH__",
       "port": 8000,
       "script": "uvicorn app:app --host 0.0.0.0 --port 8000 --workers 1 --timeout-keep-alive 620 --no-access-log",
       "env": [

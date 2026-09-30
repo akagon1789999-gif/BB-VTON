@@ -93,6 +93,34 @@ curl -X POST "https://$EAS_HOST/api/predict/$SERVICE_NAME/v1/tryon" \
 | `segmentation_free` | `true` | maskless mode |
 | `response_format` | `base64` | `binary` returns the first image as PNG |
 
+## Which registry holds the image
+
+`REGISTRY_KIND` picks one. The default is `acr`; this deployment uses `ghcr`.
+
+| | `acr` | `ghcr` |
+|---|---|---|
+| Cost | Personal Edition free, Enterprise ~$23/mo | free |
+| EAS pulls over | VPC endpoint, in-region | public internet |
+| Credentials in EAS config | none needed (same account) | `dockerAuth` |
+| Cold-start image pull | fast | slower, and it is on every cold start |
+
+ACR is the better technical choice and was the original design. It is not used
+here because **Personal Edition requires an individual-type account** -- this
+account is verified as an enterprise -- and Enterprise Edition is a monthly
+subscription for a registry that holds one image.
+
+For `ghcr` you need a classic PAT with `write:packages`. The same token is
+base64-encoded into `eas_config.json` as `dockerAuth` so EAS can pull the
+private package, which makes it a production credential, not just a build-time
+one: scope it to packages, and rotate it with the service in mind.
+
+`eas_config.json` is written mode 600 and gitignored. `--dry-run` prints the
+rendered config with `dockerAuth` redacted, so the token does not end up in a
+terminal scrollback.
+
+The switch back is one variable. If an ACR instance appears later, set
+`REGISTRY_KIND=acr` with the ACR credentials and nothing else changes.
+
 ## Security posture
 
 - **SSRF.** URL inputs are an SSRF primitive: an EAS replica sits in a VPC next

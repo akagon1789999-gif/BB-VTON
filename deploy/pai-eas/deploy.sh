@@ -31,10 +31,20 @@ WEIGHTS_STAGING="${WEIGHTS_STAGING%/}"
 : "${OSS_WEIGHTS_PREFIX:=fashn-vton-1.5/weights}"
 : "${EAS_ENDPOINT:=pai-eas.${REGION}.aliyuncs.com}"
 
-# Push over the public ACR endpoint from here; have EAS pull over the VPC one,
-# which is faster and keeps the image pull off the public internet.
+# Which registry holds the image.
+#
+#   acr   Alibaba Container Registry. Push over the public endpoint from here,
+#         have EAS pull over the VPC one -- faster, off the public internet,
+#         and no credentials needed because it is the same account.
+#   ghcr  GitHub Container Registry. Free, but public-internet: EAS needs
+#         credentials, and every cold start pays an internet pull instead of
+#         a VPC one. Chosen here because ACR Personal Edition requires an
+#         individual-type account, and Enterprise Edition is a subscription.
+: "${REGISTRY_KIND:=acr}"
+
 : "${ACR_REGISTRY:=registry.${REGION}.aliyuncs.com}"
 readonly ACR_REGISTRY_VPC="${ACR_REGISTRY/registry./registry-vpc.}"
+: "${GHCR_REGISTRY:=ghcr.io}"
 
 readonly OSS_INTERNAL_ENDPOINT="oss-${REGION}-internal.aliyuncs.com"
 readonly OSS_PUBLIC_ENDPOINT="oss-${REGION}.aliyuncs.com"
@@ -98,9 +108,13 @@ done
 # --------------------------------------------------------------- preflight
 log "preflight"
 require_cmd docker ossutil eascmd python3 git
-require_env ACR_NAMESPACE ACR_USERNAME ACR_PASSWORD \
-            OSS_BUCKET \
-            ALIBABA_CLOUD_ACCESS_KEY_ID ALIBABA_CLOUD_ACCESS_KEY_SECRET
+require_env OSS_BUCKET ALIBABA_CLOUD_ACCESS_KEY_ID ALIBABA_CLOUD_ACCESS_KEY_SECRET
+
+case "$REGISTRY_KIND" in
+  acr)  require_env ACR_NAMESPACE ACR_USERNAME ACR_PASSWORD ;;
+  ghcr) require_env GHCR_OWNER GHCR_USERNAME GHCR_TOKEN ;;
+  *)    die "REGISTRY_KIND must be 'acr' or 'ghcr', not '${REGISTRY_KIND}'" ;;
+esac
 
 docker buildx version >/dev/null 2>&1 \
   || die "docker buildx is required (it is what cross-builds linux/amd64 from macOS)"
@@ -113,13 +127,31 @@ if [[ -z "${IMAGE_TAG:-}" ]]; then
   IMAGE_TAG="$(date -u +%Y%m%d)-${git_sha}"
 fi
 readonly IMAGE_TAG
-readonly IMAGE_PUSH="${ACR_REGISTRY}/${ACR_NAMESPACE}/${IMAGE_NAME}:${IMAGE_TAG}"
-readonly IMAGE_PULL="${ACR_REGISTRY_VPC}/${ACR_NAMESPACE}/${IMAGE_NAME}:${IMAGE_TAG}"
+
+# Where we push, where EAS pulls, and whether EAS needs credentials to do it.
+case "$REGISTRY_KIND" in
+  acr)
+    IMAGE_PUSH="${ACR_REGISTRY}/${ACR_NAMESPACE}/${IMAGE_NAME}:${IMAGE_TAG}"
+    IMAGE_PULL="${ACR_REGISTRY_VPC}/${ACR_NAMESPACE}/${IMAGE_NAME}:${IMAGE_TAG}"
+    DOCKER_AUTH=""            # same account -- EAS pulls without credentials
+    ;;
+  ghcr)
+    # ghcr.io rejects uppercase in the owner segment, and GitHub usernames
+    # are commonly mixed case, so fold it rather than fail on push.
+    ghcr_owner_lc="$(printf '%s' "$GHCR_OWNER" | tr '[:upper:]' '[:lower:]')"
+    IMAGE_PUSH="${GHCR_REGISTRY}/${ghcr_owner_lc}/${IMAGE_NAME}:${IMAGE_TAG}"
+    IMAGE_PULL="$IMAGE_PUSH"  # no VPC twin: EAS pulls the address we pushed to
+    # base64 wraps at 76 columns on GNU coreutils; EAS wants one line.
+    DOCKER_AUTH="$(printf '%s:%s' "$GHCR_USERNAME" "$GHCR_TOKEN" | base64 | tr -d '\n')"
+    ;;
+esac
+readonly IMAGE_PUSH IMAGE_PULL DOCKER_AUTH
 readonly OSS_WEIGHTS_PATH="oss://${OSS_BUCKET}/${OSS_WEIGHTS_PREFIX}/"
 
 cat >&2 <<PLAN
 
   region        ${REGION}
+  registry      ${REGISTRY_KIND}
   service       ${SERVICE_NAME}
   instance      ${INSTANCE_TYPE}   (0 .. ${MAX_REPLICAS} replicas, scale-to-zero)
   image push    ${IMAGE_PUSH}
@@ -188,13 +220,20 @@ CFG
 
 # ------------------------------------------------------------------ image
 build_and_push() {
-  log "logging in to ${ACR_REGISTRY}"
+  local host user pass
+  case "$REGISTRY_KIND" in
+    acr)  host="$ACR_REGISTRY";  user="$ACR_USERNAME";  pass="$ACR_PASSWORD" ;;
+    ghcr) host="$GHCR_REGISTRY"; user="$GHCR_USERNAME"; pass="$GHCR_TOKEN" ;;
+  esac
+
+  log "logging in to ${host}"
   if [[ $DRY_RUN -eq 1 ]]; then
-    printf '\033[2m  would run: docker login --password-stdin %s\033[0m\n' "$ACR_REGISTRY" >&2
+    printf '\033[2m  would run: docker login --password-stdin %s\033[0m\n' "$host" >&2
   else
-    printf '%s' "$ACR_PASSWORD" \
-      | docker login --username "$ACR_USERNAME" --password-stdin "$ACR_REGISTRY" \
-      || die "ACR login failed"
+    # --password-stdin, never a flag: argv is world readable via ps.
+    printf '%s' "$pass" \
+      | docker login --username "$user" --password-stdin "$host" \
+      || die "${REGISTRY_KIND} login failed"
   fi
 
   # --platform linux/amd64 is not optional: EAS GPU nodes are x86_64, and an
@@ -208,8 +247,11 @@ build_and_push() {
       --push \
       .
 
-  # Tag the VPC name at the same digest so eas_config can reference it.
-  run docker buildx imagetools create --tag "$IMAGE_PULL" "$IMAGE_PUSH"
+  # ACR only: tag the VPC name at the same digest so eas_config can reference
+  # it. On ghcr there is no second address -- EAS pulls what we just pushed.
+  if [[ "$REGISTRY_KIND" == acr ]]; then
+    run docker buildx imagetools create --tag "$IMAGE_PULL" "$IMAGE_PUSH"
+  fi
 }
 
 # ---------------------------------------------------------------- service
@@ -225,20 +267,37 @@ render_config() {
     OSS_INTERNAL_ENDPOINT="$OSS_INTERNAL_ENDPOINT" \
     OSS_WEIGHTS_PATH="$OSS_WEIGHTS_PATH" \
     URL_ALLOWLIST="$URL_ALLOWLIST" \
+    DOCKER_AUTH="$DOCKER_AUTH" \
     python3 - <<'PY'
-import json, os, pathlib
+import copy, json, os, pathlib
 
 template = pathlib.Path("eas_config.template.json").read_text()
 for key in (
     "IMAGE", "SERVICE_NAME", "INSTANCE_TYPE", "MAX_REPLICAS",
     "OSS_INTERNAL_ENDPOINT", "OSS_WEIGHTS_PATH", "URL_ALLOWLIST",
+    "DOCKER_AUTH",
 ):
     template = template.replace(f"__{key}__", os.environ[key])
 
 config = json.loads(template)  # fails loudly on a malformed substitution
 assert "__" not in json.dumps(config), "unsubstituted placeholder remains"
-pathlib.Path("eas_config.json").write_text(json.dumps(config, indent=2) + "\n")
-print(json.dumps(config, indent=2))
+
+# On ACR the field is empty; EAS should not see a blank credential at all.
+for container in config.get("containers", []):
+    if not container.get("dockerAuth"):
+        container.pop("dockerAuth", None)
+
+out = pathlib.Path("eas_config.json")
+out.write_text(json.dumps(config, indent=2) + "\n")
+out.chmod(0o600)  # it carries a registry credential when REGISTRY_KIND=ghcr
+
+# --dry-run prints this too, so redact rather than leaving a usable token in
+# a terminal scrollback.
+shown = copy.deepcopy(config)
+for container in shown.get("containers", []):
+    if container.get("dockerAuth"):
+        container["dockerAuth"] = "<redacted>"
+print(json.dumps(shown, indent=2))
 PY
 
   # The render gates everything after it, so prove it produced a file

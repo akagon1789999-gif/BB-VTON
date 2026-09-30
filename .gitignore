@@ -28,3 +28,10 @@ __pycache__/
 deploy/pai-eas/.env.deploy
 deploy/pai-eas/eas_config.json
 deploy/pai-eas/tests/venv/
+
+# Private keys never belong in the repo
+*.pem
+KEY/
+
+# Operator notes: carries an AccessKey ID and host details. Public repo.
+deploy/RESUME.md
