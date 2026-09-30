@@ -19,7 +19,11 @@ cd "$SCRIPT_DIR"
 # --------------------------------------------------------------- settings
 : "${REGION:=cn-shanghai}"
 : "${SERVICE_NAME:=fashn_vton_15}"
-: "${INSTANCE_TYPE:=ecs.gn7i-c8g1.2xlarge}"   # A10, 24 GB VRAM, Ampere
+: "${INSTANCE_TYPE:=ml.gu7i.c16m60.1-gu30}"   # GU30 = A10 class, 24 GB, Ampere
+# EAS sells PAI-native GU-series SKUs, not raw ECS instance names. An
+# ecs.gn7i-* name is not a product EAS can order, and asking for one fails
+# with "订单配置参数不符合校验条件" (order configuration failed validation) --
+# which reads like a quota problem and is not one.
 : "${MAX_REPLICAS:=3}"
 : "${IMAGE_NAME:=fashn-vton}"
 : "${FASHN_VTON_REF:=main}"

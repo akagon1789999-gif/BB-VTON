@@ -141,9 +141,19 @@ The switch back is one variable. If an ACR instance appears later, set
 
 Three values are environment-specific and worth confirming before the first run:
 
-1. **`INSTANCE_TYPE`** — `ecs.gn7i-c8g1.2xlarge` (A10, 24 GB) suits the ≥8 GB
-   Ampere+ recommendation, but GPU availability varies by region and quota.
-   `eascmd instances` lists what your account can actually launch.
+1. **`INSTANCE_TYPE`** — `ml.gu7i.c16m60.1-gu30` (GU30 = A10 class, 24 GB,
+   16 vCPU / 60 GB RAM), which clears the ≥8 GB Ampere+ recommendation.
+
+   Use a **PAI GU-series** name, not an ECS one. EAS orders from its own
+   product catalogue, so `ecs.gn7i-c8g1.2xlarge` -- a perfectly real ECS
+   instance type -- is rejected at order validation with
+   `订单配置参数不符合校验条件`. That message reads like missing GPU quota and
+   sends you to a support ticket you do not need. `ml.gu7i.c32m188.1-gu30` is
+   the larger sibling if one A10 is not enough.
+
+   There is no `eascmd instances` subcommand despite what older docs suggest;
+   the authoritative list is the instance-type dropdown on the PAI console's
+   EAS deployment page, with the region selected.
 2. **`storage[].oss.readOnly`** — if your eascmd build rejects the field, drop
    it; nothing here writes to the mount.
 3. **Dedicated gateway** — EAS does **not** allow `min: 0` behind one. Default
