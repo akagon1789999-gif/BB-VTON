@@ -372,6 +372,109 @@ class SelfHostedProviderTest(unittest.TestCase):
         self.assertEqual(result.status, STATUS_FAILED)
         self.assertEqual(result.error_code, "UnknownGeneration")
 
+    # -------------------------------------------------------------- health
+    def test_health_hits_the_health_path(self):
+        seen = {}
+
+        def fake(url, method="GET", payload=None, headers=None, timeout=60):
+            seen.update(url=url, timeout=timeout, headers=headers)
+            return 200, {"queue": 0, "uptime": 12}, {}
+
+        with mock.patch.object(vton15_module, "request_json", fake):
+            body = self.provider.health(timeout=10)
+
+        self.assertEqual(seen["url"], "https://gpu.internal/health")
+        self.assertEqual(seen["timeout"], 10)      # short probe, not the warm-up
+        self.assertEqual(seen["headers"]["Authorization"], "tok")
+        self.assertEqual(body["queue"], 0)
+
+    def test_health_defaults_to_the_cold_start_timeout(self):
+        seen = {}
+
+        def fake(url, method="GET", payload=None, headers=None, timeout=60):
+            seen["timeout"] = timeout
+            return 200, {}, {}
+
+        with mock.patch.object(vton15_module, "request_json", fake):
+            self.provider.health()
+        self.assertGreaterEqual(seen["timeout"], 300)
+
+    def test_health_error_status_raises(self):
+        with mock.patch.object(
+            vton15_module, "request_json", lambda *a, **k: (500, {"error": "boom"}, {})
+        ):
+            with self.assertRaises(ProviderError):
+                self.provider.health(timeout=1)
+
+    # ---------------------------------------------------------------- warm
+    def _await_warm(self, timeout=5.0):
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            state = self.provider.warm_state()
+            if state.get("status") in ("ready", "error"):
+                return state
+            time.sleep(0.01)
+        self.fail("warm never settled")
+
+    def test_warm_returns_immediately_and_settles_in_the_background(self):
+        with mock.patch.object(
+            vton15_module, "request_json", lambda *a, **k: (200, {"uptime": 3}, {})
+        ):
+            state = self.provider.warm()
+            self.assertEqual(state["status"], "warming")   # does not block
+            settled = self._await_warm()
+
+        self.assertEqual(settled["status"], "ready")
+        self.assertEqual(settled["service"]["uptime"], 3)
+
+    def test_a_failed_warm_is_recorded_not_raised(self):
+        def explode(*args, **kwargs):
+            raise TimeoutError_(detail="cold start exceeded")
+
+        with mock.patch.object(vton15_module, "request_json", explode):
+            self.provider.warm()
+            settled = self._await_warm()
+
+        self.assertEqual(settled["status"], "error")
+        self.assertIn("cold start", settled["error"])
+
+    def test_concurrent_warms_collapse_into_one(self):
+        started = []
+
+        def slow(*args, **kwargs):
+            started.append(1)
+            time.sleep(0.2)
+            return 200, {}, {}
+
+        with mock.patch.object(vton15_module, "request_json", slow):
+            self.provider.warm()
+            second = self.provider.warm()
+            # The second call joins the in-flight warm rather than starting a
+            # second replica spin-up.
+            self.assertEqual(second["status"], "warming")
+            self._await_warm()
+
+        self.assertEqual(len(started), 1)
+
+    def test_describe_advertises_the_capabilities(self):
+        described = self.provider.describe()
+        self.assertTrue(described["supportsHealth"])
+        self.assertTrue(described["supportsWarm"])
+
+
+class ProviderHealthContractTest(unittest.TestCase):
+    """Engines we do not host have nothing useful to answer."""
+
+    def test_hosted_providers_do_not_claim_health_or_warm(self):
+        for name in ("fashn_api", "mock"):
+            provider = get_provider(name)
+            self.assertFalse(provider.supports_health, name)
+            self.assertFalse(provider.supports_warm, name)
+            with self.assertRaises(NotImplementedError):
+                provider.health()
+            with self.assertRaises(NotImplementedError):
+                provider.warm()
+
 
 class MockProviderTest(unittest.TestCase):
     def setUp(self):

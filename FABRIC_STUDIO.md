@@ -374,6 +374,34 @@ workers, a poll can land on a worker that never saw the submission and is told t
 unknown. Run a single worker, pin sessions, or move the job table to shared storage before
 scaling out.
 
+### Health and warm-up
+
+| Route | Does |
+|---|---|
+| `GET /api/admin/fabric-studio/vton-health` | 10-second probe. Reports `ready`, `cold` or `error`. |
+| `POST /api/admin/fabric-studio/vton-warm` | Starts a replica, returns `202` immediately. |
+
+Both are admin-only, and both are no-ops on `fashn_api` and `mock`, which advertise
+`supportsHealth: false` — a hosted API's uptime is not ours to inspect and probing it
+would just spend a credit.
+
+The probe is short on purpose. EAS runs with `interceptTraffic: true`, so a request to a
+sleeping service is *held* while a replica starts rather than refused; an unbounded health
+check would therefore hang for the length of a cold start. Ten seconds separates "warm"
+from "not warm" and answers either way — a timeout there is reported as `cold`, which is
+information rather than a failure.
+
+Warm-up exists because a cold start is 2–4 minutes and a customer should not be the one
+paying it. Call it when someone opens the studio, so the GPU is up by the time they have
+chosen a fabric.
+
+**Do not put it on a timer.** `scaleDownGracePeriodSeconds` is 900, so warming every ten
+minutes keeps a replica alive permanently and you are paying for an always-on GPU — the
+exact bill scale-to-zero exists to avoid. Warm on a signal that a human is present.
+
+It is admin-only for the same reason: an unauthenticated warm endpoint is a button that
+spends money. Exposing it to the studio page needs a per-client rate limit first.
+
 ## 14. Known limitations
 
 * **Segmentation is a stub by default.** `NoopSegmentationProvider` produces no masks;

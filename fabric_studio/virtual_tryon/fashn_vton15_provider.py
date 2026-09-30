@@ -77,6 +77,8 @@ class _Job(object):
 class FashnVton15Provider(VirtualTryOnProvider):
     name = "fashn_vton_15"
     supports_prompt = False
+    supports_health = True
+    supports_warm = True
     # VTON 1.5 puts an existing garment onto a person. It cannot remake a
     # garment in a new fabric, so the pipeline composites locally instead.
     supports_garment_remake = False
@@ -87,6 +89,8 @@ class FashnVton15Provider(VirtualTryOnProvider):
         self._timeout = timeout
         self._jobs = {}
         self._lock = threading.Lock()
+        self._warm_thread = None
+        self._warm_state = {"status": "unknown", "checkedAt": None}
 
     # ------------------------------------------------------------ config
     @property
@@ -283,17 +287,80 @@ class FashnVton15Provider(VirtualTryOnProvider):
         for key, _job in ordered[: len(self._jobs) - _JOB_RETENTION]:
             self._jobs.pop(key, None)
 
-    def health(self):
+    # ------------------------------------------------------------ health
+    def health(self, timeout=None):
         """Ask the service how it is. Returns the parsed body, or raises.
 
-        Useful for a readiness check, and for warming a scaled-to-zero replica
-        before a customer pays the cold start.
+        `timeout` is the interesting argument. EAS is configured with
+        `interceptTraffic: true`, so a request to a scaled-to-zero service is
+        *held* while a replica starts rather than refused — which means this
+        call doubles as the warm-up, and on a cold service it takes as long as
+        a cold start.
+
+        So the two uses want opposite timeouts:
+
+          health(timeout=10)   "is it up *right now*" -- a probe for an
+                               operator, which reports cold rather than hanging
+          health()             "get it up" -- the full 420s, used by warm()
+
+        A short probe timing out is therefore information, not a failure.
         """
         status_code, body, _headers = request_json(
             "%s/health" % self.base_url,
             headers=self._headers(),
-            timeout=self.timeout,
+            timeout=timeout or self.timeout,
         )
         if status_code >= 400:
-            raise ProviderError(detail="VTON 1.5 health check failed: HTTP %s" % status_code)
+            raise ProviderError(
+                detail="VTON 1.5 health check failed: HTTP %s" % status_code
+            )
         return body or {}
+
+    def warm(self):
+        """Start a replica in the background. Returns the current warm state.
+
+        Call this when a customer opens the studio, so the GPU is up by the
+        time they have chosen a fabric. It turns a 2-4 minute wait on their
+        first try-on into no wait at all.
+
+        Do NOT call it on a timer. `scaleDownGracePeriodSeconds` is 900, so
+        warming every ten minutes keeps a replica alive permanently and you are
+        paying for an always-on GPU -- which is the bill scale-to-zero exists
+        to avoid. Warm on a signal that a human is actually present.
+
+        Concurrent calls collapse into the one in-flight warm.
+        """
+        with self._lock:
+            if self._warm_thread is not None and self._warm_thread.is_alive():
+                return dict(self._warm_state)
+            self._warm_state = {"status": "warming", "startedAt": time.time()}
+            thread = threading.Thread(target=self._warm_run, name="vton15-warm")
+            thread.daemon = True
+            self._warm_thread = thread
+            state = dict(self._warm_state)
+        thread.start()
+        return state
+
+    def warm_state(self):
+        with self._lock:
+            return dict(self._warm_state)
+
+    def _warm_run(self):
+        started = time.time()
+        try:
+            body = self.health()
+            state = {
+                "status": "ready",
+                "checkedAt": time.time(),
+                "tookSeconds": round(time.time() - started, 1),
+                "service": body,
+            }
+        except Exception as exc:  # noqa: BLE001 - a thread must not die silently
+            state = {
+                "status": "error",
+                "checkedAt": time.time(),
+                "tookSeconds": round(time.time() - started, 1),
+                "error": getattr(exc, "detail", None) or str(exc),
+            }
+        with self._lock:
+            self._warm_state = state

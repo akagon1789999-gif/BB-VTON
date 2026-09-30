@@ -24,7 +24,13 @@ from . import (
     segmentation,
     storage,
 )
-from .errors import FabricStudioError, NotFoundError, ValidationError, log_exception
+from .errors import (
+    FabricStudioError,
+    NotFoundError,
+    TimeoutError_,
+    ValidationError,
+    log_exception,
+)
 from .virtual_tryon import available_providers, get_provider
 
 CLIENT_ID_RE = re.compile(r"^[A-Za-z0-9_-]{6,64}$")
@@ -258,6 +264,58 @@ def create_blueprint(admin_required):
             "importer": importer.status(),
             "templates": garment_templates.ids(),
             "generations": generations.stats(),
+        })
+
+    @bp.get("/api/admin/fabric-studio/vton-health")
+    @admin
+    def admin_vton_health():
+        """Is the try-on engine up right now?
+
+        Deliberately a short probe. The engine scales to zero and EAS holds a
+        request while a replica starts, so an unbounded check would hang for
+        the length of a cold start. Ten seconds distinguishes "warm" from
+        "not warm" and returns either way -- a timeout here is an answer, not
+        an error, and is reported as `cold`.
+        """
+        provider = get_provider()
+        payload = {"provider": provider.name, "supported": provider.supports_health}
+        if not provider.supports_health:
+            return json_response(200, payload)
+        try:
+            payload["status"] = "ready"
+            payload["service"] = provider.health(timeout=10)
+        except TimeoutError_:
+            payload["status"] = "cold"
+            payload["detail"] = "No reply within 10s. The engine is asleep or still starting."
+        except FabricStudioError as exc:
+            payload["status"] = "error"
+            payload["detail"] = exc.to_payload().get("message")
+        if provider.supports_warm:
+            payload["warm"] = provider.warm_state()
+        return json_response(200, payload)
+
+    @bp.post("/api/admin/fabric-studio/vton-warm")
+    @admin
+    def admin_vton_warm():
+        """Start a replica now, so the next customer does not pay the cold start.
+
+        Returns immediately; poll vton-health to see it land.
+
+        Admin-only on purpose. An unauthenticated warm endpoint is a button
+        that spends money -- each call can spin up a GPU -- so exposing it to
+        the studio page needs a per-client rate limit first.
+
+        Also not something to put on a timer: the engine drops to zero after
+        15 minutes idle, so warming every ten keeps a GPU alive permanently
+        and bills for it. Warm on a signal that a human is present.
+        """
+        provider = get_provider()
+        if not provider.supports_warm:
+            return json_response(200, {"provider": provider.name, "supported": False})
+        return json_response(202, {
+            "provider": provider.name,
+            "supported": True,
+            "warm": provider.warm(),
         })
 
     @bp.post("/api/admin/fabric-studio/migrate")

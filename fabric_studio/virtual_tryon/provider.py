@@ -22,6 +22,11 @@ class VirtualTryOnProvider(object):
 
     name = "abstract"
     supports_prompt = False
+    # Whether the engine exposes a liveness probe, and whether it can be cold
+    # enough to be worth waking before a customer arrives. Both are true only
+    # for an engine we host ourselves.
+    supports_health = False
+    supports_warm = False
     # Whether the engine can remake a garment in a new fabric (step one of the
     # two-step pipeline). Engines that cannot are still usable: the pipeline
     # composites locally instead.
@@ -46,12 +51,32 @@ class VirtualTryOnProvider(object):
         """False when required credentials/URLs are missing."""
         return True
 
+    def health(self, timeout=None):
+        """Liveness of the backing engine.
+
+        Only meaningful for an engine we run ourselves. A hosted API has no
+        equivalent worth asking for -- its uptime is not ours to inspect and a
+        probe would just spend a credit -- so those providers leave
+        `supports_health` False and this raises.
+        """
+        raise NotImplementedError("%s has no health check" % self.name)
+
+    def warm(self):
+        """Wake a cold engine ahead of a real request, without blocking.
+
+        Only engines that can be cold implement this. Everything else is
+        always warm by definition.
+        """
+        raise NotImplementedError("%s does not need warming" % self.name)
+
     def describe(self):
         return {
             "provider": self.name,
             "configured": self.is_configured(),
             "supportsPrompt": self.supports_prompt,
             "supportsGarmentRemake": self.supports_garment_remake,
+            "supportsHealth": self.supports_health,
+            "supportsWarm": self.supports_warm,
         }
 
 
