@@ -1790,6 +1790,40 @@ function bbClientId() {
   }
 }
 
+/**
+ * Wake the try-on engine.
+ *
+ * The self-hosted engine scales to zero, so the first request after an idle
+ * spell waits out a cold start — image pull, weights off OSS, CUDA warm-up,
+ * two to four minutes. Asking for a replica the moment someone opens a try-on
+ * flow gives the GPU that head start while they are still choosing a photo and
+ * a fabric, which usually hides the wait completely.
+ *
+ * Deliberately NOT called on page load. That would spin a GPU for every
+ * visitor, bounces included, and on even modest traffic would keep one alive
+ * permanently — the exact bill scale-to-zero exists to avoid. Intent first.
+ *
+ * Fire and forget, and failure is never surfaced: a 429 means someone else
+ * already asked (a success, for our purposes), and anything else just means
+ * the customer pays a cold start they would have paid regardless.
+ */
+let bbWarmedAt = 0;
+function bbWarmEngine() {
+  const now = Date.now();
+  // The server enforces its own ceiling; this only avoids a pointless 429
+  // when someone bounces between the two studio doors.
+  if (now - bbWarmedAt < 60000) return;
+  bbWarmedAt = now;
+  try {
+    fetch('/api/fabric-studio/warm', {
+      method: 'POST',
+      headers: { 'X-BB-Client-Id': bbClientId() },
+    }).catch(() => {});
+  } catch (err) {
+    /* warming must never break a navigation */
+  }
+}
+
 /** The catalogue endpoints, which answer with a plain { message }. */
 async function studioFetch(path, options) {
   const opts = Object.assign({}, options || {});
@@ -2468,16 +2502,22 @@ class Component extends DCLogic {
   // shop, which is the whole point of this flow — Fabric Studio is the one
   // that starts from a length of cloth.
 
-  goTryOn = () => this.setState({
-    view: 'tryon', step: 1, isProcessing: false, tryOnError: null,
-    resultImageUrl: null, selectedSuitId: null, mobileMenuOpen: false,
-  });
+  goTryOn = () => {
+    bbWarmEngine();
+    this.setState({
+      view: 'tryon', step: 1, isProcessing: false, tryOnError: null,
+      resultImageUrl: null, selectedSuitId: null, mobileMenuOpen: false,
+    });
+  };
 
   /** "Try On" from the catalogue: same flow, with that product already chosen. */
-  tryOnSuit = (suitId) => this.setState({
-    view: 'tryon', step: 1, selectedSuitId: suitId, isProcessing: false,
-    tryOnError: null, resultImageUrl: null, mobileMenuOpen: false,
-  });
+  tryOnSuit = (suitId) => {
+    bbWarmEngine();
+    this.setState({
+      view: 'tryon', step: 1, selectedSuitId: suitId, isProcessing: false,
+      tryOnError: null, resultImageUrl: null, mobileMenuOpen: false,
+    });
+  };
 
   startLook = async () => {
     if (!this.state.selectedSuitId) {
@@ -2525,6 +2565,7 @@ class Component extends DCLogic {
   // into the same workbench: only the copy differs.
 
   goFabricStudio = () => {
+    bbWarmEngine();
     this.setState({ view: 'fabricstudio', studioMode: 'fabric', mobileMenuOpen: false });
     this.stBoot();
   };
