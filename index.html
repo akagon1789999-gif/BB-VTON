@@ -164,11 +164,25 @@
   <script>
     // Runs before paint: pick the stored theme, else follow the OS. Kept tiny
     // and inline on purpose — a deferred script would flash the wrong theme.
+    //
+    // NOTE: no `camelCase = ...` assignments in ANY inline script inside the
+    // DC template block. The DC runtime rewrites camelCase *attribute names*
+    // to sc-camel-kebab-case, and its regex — whitespace, camelCase word,
+    // `=` — cannot tell an HTML attribute from a JS assignment. It runs over
+    // the whole template including script bodies, so a `var prefersDark`
+    // declaration became `var sc-camel-prefers-dark`, which threw a
+    // SyntaxError on every page load — three times, from inside React's
+    // commit phase, so it read as a React bug rather than a mangled script.
+    // Lowercase names, or no variable at all. The app's own logic
+    // (the data-dc-script block after the template closes) is exempt: it is
+    // extracted before encoding and is free to use camelCase.
+    // tests/test_template_encoding.py holds this line.
     (function () {
       var stored = null;
       try { stored = window.localStorage.getItem('bbTheme'); } catch (err) { stored = null; }
-      var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-      var theme = (stored === 'dark' || stored === 'cream') ? stored : (prefersDark ? 'dark' : 'cream');
+      var theme = (stored === 'dark' || stored === 'cream')
+        ? stored
+        : ((window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'cream');
       document.documentElement.setAttribute('data-theme', theme);
       var meta = document.querySelector('meta[name="theme-color"]');
       if (meta) meta.setAttribute('content', theme === 'dark' ? '#0F0D0B' : '#F6F2EA');
