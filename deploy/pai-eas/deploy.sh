@@ -184,8 +184,20 @@ stage_weights() {
   run python3 -m venv "${WORKDIR}/venv"
   run "${WORKDIR}/venv/bin/pip" install --quiet --upgrade pip
   run "${WORKDIR}/venv/bin/pip" install --quiet huggingface_hub
+
+  # download_weights.py fetches the VTON and DWPose weights, then finishes by
+  # warming the human parser -- which imports fashn_human_parser, a module that
+  # ships inside the fashn-vton package and is deliberately NOT installed in
+  # this throwaway venv. That last step therefore always fails here, with
+  # ModuleNotFoundError, *after* the three files we need are already on disk.
+  #
+  # We do not want its copy of the parser anyway: the Dockerfile bakes the
+  # parser into the image so a cold replica does no Hub round-trip. So treat a
+  # non-zero exit as expected and let verify_weights() below be the real gate --
+  # it checks for the three files by name and dies if any is missing.
   run "${WORKDIR}/venv/bin/python" "${repo}/scripts/download_weights.py" \
-      --weights-dir "$WEIGHTS_STAGING"
+      --weights-dir "$WEIGHTS_STAGING" \
+    || warn "download_weights.py exited non-zero (expected at the human-parser step) -- verifying what landed"
 }
 
 verify_weights() {
