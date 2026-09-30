@@ -1,4 +1,4 @@
-const CACHE = 'apparel-tryon-v4';
+const CACHE = 'apparel-tryon-v5';
 // Bump CACHE on every release that touches these files. The activate handler
 // deletes every cache whose name does not match, which is what evicts the
 // previous release's framework and offline fallback.

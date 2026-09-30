@@ -205,7 +205,7 @@
     <div style="position:fixed;inset:0;background:rgba(0,0,0,0.65);display:flex;align-items:center;justify-content:center;z-index:300;padding:20px;box-sizing:border-box;" onClick="{{ closeSharePopup }}">
       <div style="background:var(--surface);border:1px solid rgba(var(--accent-rgb),0.3);border-radius:20px;max-width:360px;width:100%;padding:28px 24px;text-align:center;box-shadow:var(--shadow-lg);" onClick="{{ stopPropagation }}">
         <div style="width:88px;height:88px;border-radius:14px;overflow:hidden;margin:0 auto 18px;border:1px solid rgba(var(--border-rgb),0.12);background:var(--well);">
-          <img src="{{ sharePopupSuitImg }}" alt="{{ sharePopupSuitName }}" style="width:100%;height:100%;object-fit:cover;display:block;">
+          <img src="{{ sharePopupSuitImg }}" alt="{{ sharePopupSuitName }}" style="width:100%;height:100%;object-fit:cover;display:block;" loading="lazy">
         </div>
         <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:600;margin-bottom:8px;">See how it looks on you 👀</div>
         <div style="color:var(--text-2);font-size:13.5px;line-height:1.5;margin-bottom:4px;">Someone shared <strong style="color:var(--text);">{{ sharePopupSuitName }}</strong> with you.</div>
@@ -260,7 +260,7 @@
         </sc-if>
 
         <sc-if value="{{ videoStageDone }}" hint-placeholder-val="{{ false }}">
-          <video src="{{ videoResultUrl }}" controls="controls" style="width:100%;border-radius:12px;background:#000;display:block;margin-bottom:16px;"></video>
+          <video src="{{ videoResultUrl }}" controls="controls" style="width:100%;border-radius:12px;background:#000;display:block;margin-bottom:16px;" preload="none"></video>
           <button style="width:100%;background:linear-gradient(180deg,var(--cta-from),var(--cta-to));color:var(--on-accent);border:none;border-radius:999px;padding:14px;font-weight:700;font-size:14.5px;cursor:pointer;margin-bottom:10px;" onClick="{{ downloadVideo }}">Download Video</button>
           <button style="width:100%;background:transparent;border:1px solid rgba(var(--border-rgb),0.15);color:var(--text-3);border-radius:999px;padding:12px;font-size:13px;cursor:pointer;" onClick="{{ closeVideoModal }}">Close</button>
         </sc-if>
@@ -701,7 +701,7 @@
           <sc-for list="{{ savedTryOns }}" as="item" hint-placeholder-count="0">
             <div style="background:var(--surface);border:1px solid rgba(var(--border-rgb),0.07);border-radius:14px;overflow:hidden;">
               <div style="height:220px;position:relative;background:var(--surface-2);">
-                <img src="{{ item.resultImageUrl }}" alt="{{ item.suit.name }}" style="width:100%;height:100%;object-fit:contain;object-position:center top;display:block;">
+                <img src="{{ item.resultImageUrl }}" alt="{{ item.suit.name }}" style="width:100%;height:100%;object-fit:contain;object-position:center top;display:block;" loading="lazy">
                 <div style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,0.6);color:var(--on-scrim);border-radius:8px;padding:5px 9px;font-size:11px;">{{ item.suit.name }}</div>
               </div>
               <div style="padding:14px;">
@@ -767,7 +767,7 @@
             <div>
               <div class="vt-photo-box" style="border:1px dashed rgba(var(--border-rgb),0.18);border-radius:16px;height:520px;overflow:hidden;background:var(--well);position:relative;display:flex;align-items:center;justify-content:center;" onDragOver="{{ onPhotoDragOver }}" onDrop="{{ onPhotoDrop }}">
                 <sc-if value="{{ hasUserPhoto }}" hint-placeholder-val="{{ false }}">
-                  <img src="{{ userPhotoDataUrl }}" alt="Your photo" style="max-width:100%;max-height:100%;object-fit:contain;display:block;">
+                  <img src="{{ userPhotoDataUrl }}" alt="Your photo" style="max-width:100%;max-height:100%;object-fit:contain;display:block;" loading="lazy">
                   <button style="position:absolute;top:12px;right:12px;background:rgba(0,0,0,0.6);color:var(--on-scrim);border:1px solid rgba(var(--border-rgb),0.15);border-radius:999px;padding:8px 14px;font-size:12.5px;cursor:pointer;" onClick="{{ clearUserPhoto }}">Remove</button>
                 </sc-if>
                 <sc-if value="{{ hasNoUserPhoto }}" hint-placeholder-val="{{ true }}">
@@ -830,7 +830,7 @@
             <div style="color:var(--text-3);font-size:14px;margin-bottom:26px;text-align:center;">{{ selectedSuitName }}</div>
             <div style="display:flex;gap:20px;justify-content:center;margin-bottom:30px;">
               <div style="width:100%;max-width:320px;height:440px;border-radius:14px;overflow:hidden;position:relative;border:1px solid rgba(var(--border-rgb),0.08);background:var(--well);">
-                <img src="{{ resultImageUrl }}" alt="AI-generated try-on result" style="width:100%;height:100%;object-fit:contain;object-position:center top;display:block;">
+                <img src="{{ resultImageUrl }}" alt="AI-generated try-on result" style="width:100%;height:100%;object-fit:contain;object-position:center top;display:block;" loading="lazy">
                 <div style="position:absolute;top:12px;left:12px;background:rgba(var(--accent-rgb),0.9);color:var(--on-accent);font-size:10.5px;font-weight:700;padding:4px 10px;border-radius:999px;">AI TRY-ON</div>
                 <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(0deg,rgba(0,0,0,0.75),transparent);padding:14px;display:flex;align-items:center;gap:10px;color:var(--on-scrim);">
                   <div style="width:44px;height:44px;border-radius:8px;overflow:hidden;border:1px solid rgba(var(--border-rgb),0.2);flex-shrink:0;">
@@ -910,7 +910,7 @@
 
               <div style="position:relative;border:1px {{ slot.borderStyle }} {{ slot.borderColor }};border-radius:14px;aspect-ratio:4/3;overflow:hidden;background:var(--well);" onDragOver="{{ slot.onDragOver }}" onDrop="{{ slot.onDrop }}">
                 <sc-if value="{{ slot.hasImage }}" hint-placeholder-val="{{ false }}">
-                  <img src="{{ slot.previewUrl }}" alt="{{ slot.fileName }}" style="width:100%;height:100%;object-fit:contain;display:block;">
+                  <img src="{{ slot.previewUrl }}" alt="{{ slot.fileName }}" style="width:100%;height:100%;object-fit:contain;display:block;" loading="lazy">
                   <div style="position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:20px 10px 9px;background:linear-gradient(to top,rgba(0,0,0,0.68),transparent);">
                     <span style="font-size:11px;color:var(--on-scrim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ slot.fileName }}</span>
                     <span style="display:flex;gap:6px;flex-shrink:0;">
@@ -1199,13 +1199,13 @@
 
             <sc-if value="{{ stShowResult }}" hint-placeholder-val="{{ false }}">
               <div style="display:flex;flex-direction:column;align-items:center;gap:16px;width:100%;">
-                <img src="{{ stResultUrl }}" alt="Your fabric, on you" style="max-width:100%;max-height:62vh;width:auto;border-radius:14px;border:1px solid rgba(var(--border-rgb),0.1);box-shadow:var(--shadow-card);display:block;animation:vt-fadeup .3s ease;">
+                <img src="{{ stResultUrl }}" alt="Your fabric, on you" style="max-width:100%;max-height:62vh;width:auto;border-radius:14px;border:1px solid rgba(var(--border-rgb),0.1);box-shadow:var(--shadow-card);display:block;animation:vt-fadeup .3s ease;" loading="lazy">
 
                 <sc-if value="{{ stHasManyOutputs }}" hint-placeholder-val="{{ false }}">
                   <div style="display:flex;gap:7px;">
                     <sc-for list="{{ stOutputThumbs }}" as="o" hint-placeholder-count="3">
                       <div style="width:44px;height:62px;border-radius:8px;overflow:hidden;border:2px solid {{ o.border }};opacity:{{ o.opacity }};cursor:pointer;" onClick="{{ o.select }}">
-                        <img src="{{ o.url }}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;">
+                        <img src="{{ o.url }}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;" loading="lazy">
                       </div>
                     </sc-for>
                   </div>
@@ -1287,7 +1287,7 @@
           <sc-for list="{{ stHistoryEntries }}" as="h" hint-placeholder-count="3">
             <div style="position:relative;background:var(--surface);border:1px solid rgba(var(--border-rgb),0.08);border-radius:13px;padding:10px;display:flex;gap:11px;cursor:pointer;" onClick="{{ h.restore }}">
               <div style="width:56px;height:78px;border-radius:8px;overflow:hidden;background:var(--surface-2);flex-shrink:0;border:1px solid rgba(var(--border-rgb),0.07);">
-                <img src="{{ h.thumbnail }}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;">
+                <img src="{{ h.thumbnail }}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;" loading="lazy">
               </div>
               <div style="min-width:0;flex:1;">
                 <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;">
@@ -1304,7 +1304,7 @@
                 </div>
                 <div style="display:flex;gap:5px;margin-top:8px;">
                   <sc-for list="{{ h.inputs }}" as="i" hint-placeholder-count="2">
-                    <img src="{{ i.url }}" alt="" style="width:26px;height:26px;border-radius:5px;object-fit:cover;border:1px solid rgba(var(--border-rgb),0.1);display:block;">
+                    <img src="{{ i.url }}" alt="" style="width:26px;height:26px;border-radius:5px;object-fit:cover;border:1px solid rgba(var(--border-rgb),0.1);display:block;" loading="lazy">
                   </sc-for>
                 </div>
               </div>
@@ -1379,7 +1379,7 @@
             </sc-if>
             <div style="display:flex;justify-content:center;">
             <div style="position:relative;display:inline-block;max-width:100%;background:var(--well);border:1px solid rgba(var(--border-rgb),0.1);border-radius:12px;overflow:hidden;user-select:none;touch-action:none;line-height:0;" onPointerMove="{{ stCropPointerMove }}" onPointerUp="{{ stCropPointerUp }}" onPointerLeave="{{ stCropPointerUp }}">
-              <img src="{{ stCropSource }}" alt="" style="display:block;max-width:100%;max-height:46vh;width:auto;height:auto;">
+              <img src="{{ stCropSource }}" alt="" style="display:block;max-width:100%;max-height:46vh;width:auto;height:auto;" loading="lazy">
               <div style="position:absolute;inset:0;background:rgba(0,0,0,0.45);pointer-events:none;"></div>
               <div style="position:absolute;left:{{ stCropLeft }};top:{{ stCropTop }};width:{{ stCropWidth }};height:{{ stCropHeight }};border:2px solid var(--on-scrim);box-shadow:0 0 0 9999px rgba(0,0,0,0.45);cursor:move;" onPointerDown="{{ stCropMoveStart }}">
                 <div style="position:absolute;inset:0;opacity:0.4;pointer-events:none;">

@@ -171,6 +171,19 @@
 
   function load() {
     if (loadP) return loadP;
+    // The sidecar only exists if the editing host wrote it: both save() and
+    // flushNow() no-op without window.omelette.writeFile. In a plain
+    // deployment there is no host, so the file can never exist and this fetch
+    // is a guaranteed 404 on every page load — caught and ignored, but still
+    // a request and still noise in the console. Read only where a write was
+    // possible; settle immediately otherwise so subscribers still fire.
+    if (!(window.omelette && window.omelette.writeFile)) {
+      loadP = Promise.resolve().then(() => {
+        loaded = true;
+        subs.forEach((fn) => fn());
+      });
+      return loadP;
+    }
     loadP = fetch(STATE_FILE)
       .then((r) => (r.ok ? r.json() : null))
       .then((j) => {
@@ -1067,7 +1080,14 @@
       // (Claude wrote it into the HTML) so it passes through unchanged.
       let stored = this.id ? getSlot(this.id) : this._local;
       if (stored && stored.u && !/^data:image\//i.test(stored.u)) stored = null;
-      const srcAttr = this.getAttribute('src') || '';
+      let srcAttr = this.getAttribute('src') || '';
+      // An unresolved template placeholder is not a URL. This element lives in
+      // a page whose markup is compiled by a template runtime, and the raw
+      // template sits in the live DOM (hidden) before compilation — so these
+      // elements get upgraded with `src="{{ suit.img }}"` still literal, and
+      // would fetch it, producing a 404 per placeholder on every page load.
+      // Treat it as absent and wait for the compiled render to set a real one.
+      if (srcAttr.indexOf('{{') !== -1) srcAttr = '';
       this._userUrl = (stored && stored.u) || null;
       const url = this._userUrl || srcAttr;
       // Don't clobber an in-flight reframe with a store-triggered re-render.
