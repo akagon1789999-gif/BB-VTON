@@ -21,6 +21,7 @@ from . import (
     importer,
     migrations,
     prompts,
+    ratelimit,
     segmentation,
     storage,
 )
@@ -78,11 +79,32 @@ def client_id():
     return "anonymous"
 
 
+def _warm_limited(retry_after, scope):
+    """429 with Retry-After. `scope` is for the operator, not the customer."""
+    response = json_response(429, {
+        "message": "The styling engine is already waking up. Please try again shortly.",
+        "code": "warm_rate_limited",
+        "retryAfter": retry_after,
+        "scope": scope,
+    })
+    response.headers["Retry-After"] = str(int(retry_after) + 1)
+    return response
+
+
 def _int_arg(name, default, maximum=200):
     try:
         return max(0, min(int(request.args.get(name, default)), maximum))
     except (TypeError, ValueError):
         return default
+
+
+def _warm_limiters():
+    """Per-client for fairness, global for cost. See fabric_studio/ratelimit.py
+    for why the second is the one that actually bounds the bill."""
+    return (
+        ratelimit.RateLimiter(config.warm_rate_per_client(), config.warm_rate_window_seconds()),
+        ratelimit.RateLimiter(config.warm_rate_global(), config.warm_rate_global_window_seconds()),
+    )
 
 
 def create_blueprint(admin_required):
@@ -264,6 +286,45 @@ def create_blueprint(admin_required):
             "importer": importer.status(),
             "templates": garment_templates.ids(),
             "generations": generations.stats(),
+        })
+
+    per_client_warm, global_warm = _warm_limiters()
+
+    @bp.post("/api/fabric-studio/warm")
+    @api_route
+    def public_warm():
+        """Wake the try-on engine because a customer just arrived.
+
+        Called when someone opens the studio, so the GPU is up by the time they
+        have chosen a fabric -- turning a 2-4 minute first try-on into no wait.
+
+        Rate limited in two independent ways, because they defend different
+        things. The per-client window is fairness. The global window is the
+        cost ceiling, and it is the one that matters: client ids are
+        self-asserted, so rotating the header buys a fresh per-client
+        allowance but gets nowhere against the global one.
+
+        Always 202 or 429, never a wait: the warm itself runs in the
+        background.
+        """
+        provider = get_provider()
+        if not provider.supports_warm:
+            # Nothing to warm (hosted API, or mock). Not an error -- the page
+            # should be able to call this unconditionally.
+            return json_response(200, {"provider": provider.name, "supported": False})
+
+        allowed, retry_after = global_warm.check()
+        if not allowed:
+            return _warm_limited(retry_after, "global")
+
+        allowed, retry_after = per_client_warm.check(client_id())
+        if not allowed:
+            return _warm_limited(retry_after, "client")
+
+        return json_response(202, {
+            "provider": provider.name,
+            "supported": True,
+            "warm": provider.warm(),
         })
 
     @bp.get("/api/admin/fabric-studio/vton-health")

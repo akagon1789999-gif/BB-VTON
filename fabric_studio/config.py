@@ -80,6 +80,29 @@ def vton15_timeout_seconds():
     return _env_int("FASHN_VTON15_TIMEOUT_SECONDS", 420)
 
 
+# Rate limits for the public warm endpoint. Warming can start a GPU, so these
+# bound spending, not just traffic.
+#
+# The global window is the one that matters: client ids are self-asserted, so a
+# per-client limit alone is bypassed by rotating the header. One cold start per
+# minute is ample -- a warm takes 2-4 minutes, and warms collapse while one is
+# in flight, so the ceiling is roughly "one replica spin-up at a time".
+def warm_rate_per_client():
+    return _env_int("WARM_RATE_PER_CLIENT", 3)
+
+
+def warm_rate_window_seconds():
+    return _env_int("WARM_RATE_WINDOW_SECONDS", 300)
+
+
+def warm_rate_global():
+    return _env_int("WARM_RATE_GLOBAL", 1)
+
+
+def warm_rate_global_window_seconds():
+    return _env_int("WARM_RATE_GLOBAL_WINDOW_SECONDS", 60)
+
+
 # ------------------------------------------------------------ segmentation ---
 # noop (default) | remote
 def segmentation_provider_name():

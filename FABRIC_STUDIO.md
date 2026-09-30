@@ -399,8 +399,28 @@ chosen a fabric.
 minutes keeps a replica alive permanently and you are paying for an always-on GPU — the
 exact bill scale-to-zero exists to avoid. Warm on a signal that a human is present.
 
-It is admin-only for the same reason: an unauthenticated warm endpoint is a button that
-spends money. Exposing it to the studio page needs a per-client rate limit first.
+The studio page can call it directly, on `POST /api/fabric-studio/warm` — rate limited,
+since an unauthenticated warm endpoint is a button that spends money. The admin route
+stays unlimited for operators.
+
+| Env | Default | |
+|---|---|---|
+| `WARM_RATE_PER_CLIENT` / `WARM_RATE_WINDOW_SECONDS` | 3 / 300s | Fairness, per browser |
+| `WARM_RATE_GLOBAL` / `WARM_RATE_GLOBAL_WINDOW_SECONDS` | 1 / 60s | **The cost ceiling** |
+
+Two limits, because they defend different things, and the global one matters more.
+`client_id()` is self-asserted — the browser makes it up and sends it in a header, which
+is right for scoping history and useless as a spending control, since rotating the value
+buys a fresh per-client allowance every time. The global window is what actually bounds
+the bill, so it is checked first; otherwise a rotating caller would burn through other
+clients' allowances on the way to the ceiling.
+
+One spin-up per minute is ample: a warm takes 2–4 minutes and concurrent warms collapse
+into the one in flight, so the practical ceiling is "one replica starting at a time".
+
+Limits are per-process, like the job table: with N gunicorn workers the effective limit is
+N × configured. Fine for a ceiling set with headroom, wrong for anything needing exactness.
+Rejections return `429` with `Retry-After` and a `scope` of `client` or `global`.
 
 ## 14. Known limitations
 
